@@ -1,0 +1,1322 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Founders Match | Readiness Report</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Brand Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        fm: {
+                            boldGreen: '#D9EB31',
+                            darkGreen: '#475609',
+                            paleGreen: '#ECF598',
+                            charcoal: '#2B2A2A',
+                            mediumCharcoal: '#3E3E3E',
+                            taupe: '#F8F8F8',
+                            slate200: '#E2E8F0',
+                            slate400: '#94A3B8'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Instrument Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Instrument Sans', sans-serif; -webkit-print-color-adjust: exact; print-color-adjust: exact; }
+        
+        /* Print Specific Styles */
+        @media print {
+            @page { margin: 10mm; size: A4; }
+            body { background: white; padding: 0; margin: 0; }
+            .no-print { display: none !important; }
+            
+            /* Container Adjustments */
+            .print-container { 
+                max-width: 100% !important; 
+                width: 100% !important;
+                margin: 0 !important; 
+                padding: 0 !important;
+                box-shadow: none !important;
+                border: none !important;
+            }
+
+            /* Ensure Page Breaks work cleanly */
+            .print-break-inside { break-inside: avoid; page-break-inside: avoid; }
+            .print-break-before { break-before: page; page-break-before: always; }
+            
+            /* Protocol Cards specific logic */
+            .protocol-card {
+                break-inside: avoid;
+                page-break-inside: avoid;
+                display: block; /* Ensure block layout for breaking */
+                margin-bottom: 20px;
+            }
+            
+            /* Force Grid to Block for better vertical stacking on print if needed, 
+               or keep grid but ensure rows don't split cards */
+            #core-grid {
+                display: block !important;
+            }
+            
+            .bg-fm-taupe { background-color: white !important; border: 1px solid #E2E8F0 !important; }
+            
+            /* Force expanded details on print */
+            .accordion-content { 
+                max-height: none !important; 
+                opacity: 1 !important; 
+                display: block !important; 
+                overflow: visible !important;
+            }
+            .accordion-btn { display: none !important; }
+        }
+        
+        /* Smooth fade for content updates */
+        .fade-in { animation: fadeIn 0.5s ease-out forwards; }
+        @keyframes fadeIn { 
+            0% { opacity: 0.3; transform: translateY(2px); } 
+            100% { opacity: 1; transform: translateY(0); } 
+        }
+        
+        /* Custom Scrollbar for dropdowns */
+        .custom-scrollbar::-webkit-scrollbar { width: 4px; }
+        .custom-scrollbar::-webkit-scrollbar-track { background: #f1f1f1; }
+        .custom-scrollbar::-webkit-scrollbar-thumb { background: #cbd5e1; border-radius: 4px; }
+
+        /* Accordion Animation */
+        .accordion-content {
+            transition: max-height 0.3s cubic-bezier(0.4, 0, 0.2, 1), opacity 0.3s ease-out;
+            max-height: 0;
+            opacity: 0;
+            overflow: hidden;
+        }
+        .accordion-content.open {
+            max-height: 1200px; /* Increased max height for V2 data */
+            opacity: 1;
+        }
+    </style>
+</head>
+<body class="bg-fm-taupe text-fm-charcoal min-h-screen p-8 print:p-0">
+
+    <!-- Actions Bar (Hidden on Print) -->
+    <div class="max-w-[210mm] mx-auto mb-6 flex justify-between items-center no-print">
+        <div class="text-sm font-medium text-slate-500">Preview Mode</div>
+        <div class="flex gap-3 items-center">
+             <!-- JSON Upload -->
+             <label class="px-4 py-2 text-xs font-bold border border-slate-300 rounded hover:bg-white hover:border-fm-darkGreen transition-colors flex items-center gap-2 cursor-pointer bg-white shadow-sm">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="17 8 12 3 7 8"/><line x1="12" y1="3" x2="12" y2="15"/></svg>
+                <span>Upload JSON</span>
+                <input type="file" id="jsonInput" accept=".json" class="hidden" onchange="handleJsonUpload(event)">
+            </label>
+
+            <button type="button" id="btn-force-sterling" class="px-4 py-2 text-xs font-bold border border-fm-boldGreen text-fm-darkGreen rounded hover:bg-fm-boldGreen hover:text-fm-charcoal transition-colors flex items-center gap-2 cursor-pointer bg-white shadow-sm" onclick="handleGenerateClick(true)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M12 2l3.09 6.26L22 9.27l-5 4.87 1.18 6.88L12 17.77l-6.18 3.25L7 14.14 2 9.27l6.91-1.01L12 2z"></path></svg>
+                <span>Force Enterprise</span>
+            </button>
+            <button type="button" id="btn-generate" class="px-4 py-2 text-xs font-bold border border-slate-300 rounded hover:bg-white hover:border-fm-darkGreen transition-colors flex items-center gap-2 cursor-pointer bg-white shadow-sm" onclick="handleGenerateClick(false)">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 12a9 9 0 0 0-9-9 9.75 9.75 0 0 0-6.74 2.74L3 8"/><path d="M3 3v5h5"/><path d="M3 12a9 9 0 0 0 9 9 9.75 9.75 0 0 0 6.74-2.74L21 16"/><path d="M16 21h5v-5"/></svg>
+                <span>Mock Data</span>
+            </button>
+            <button type="button" id="btn-print" class="px-6 py-2 text-xs font-bold bg-fm-charcoal text-white rounded hover:bg-fm-boldGreen hover:text-fm-charcoal transition-colors flex items-center gap-2 cursor-pointer shadow-md">
+                <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"/><polyline points="7 10 12 15 17 10"/><line x1="12" y1="15" x2="12" y2="3"/></svg>
+                Print
+            </button>
+        </div>
+    </div>
+
+    <!-- Report Container (A4 Width Approximation) -->
+    <div id="report-content" class="max-w-[210mm] mx-auto bg-white shadow-xl min-h-[297mm] print-container relative overflow-hidden fade-in">
+        
+        <!-- Decorative Header Bar -->
+        <div class="h-2 w-full bg-fm-boldGreen"></div>
+
+        <div class="p-12">
+            <!-- Header -->
+            <header class="flex flex-col md:flex-row justify-between items-start mb-8 border-b border-slate-100 pb-6">
+                <!-- Left: Company Name (Priority) -->
+                <div class="mb-6 md:mb-0 w-full">
+                    <div class="flex items-start gap-4 mb-2">
+                        <!-- Logo Placeholder -->
+                        <div id="company-logo" class="w-16 h-16 rounded bg-fm-taupe border border-slate-200 flex items-center justify-center text-2xl font-bold text-fm-charcoal tracking-tighter flex-shrink-0 mt-1 transition-colors">
+                            --
+                        </div>
+                        <div>
+                            <div class="text-[10px] font-bold text-fm-slate400 uppercase tracking-widest mb-1">Readiness Profile</div>
+                            <h1 class="text-4xl font-bold tracking-tight text-fm-darkGreen leading-tight mb-3" id="company-name">--</h1>
+                            
+                            <!-- Meta Data moved here -->
+                            <div class="flex flex-wrap gap-x-6 gap-y-2 text-sm text-slate-500 font-medium">
+                                <div class="flex items-center gap-2">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400"><rect x="3" y="4" width="18" height="18" rx="2" ry="2"></rect><line x1="16" y1="2" x2="16" y2="6"></line><line x1="8" y1="2" x2="8" y2="6"></line><line x1="3" y1="10" x2="21" y2="10"></line></svg>
+                                    <span id="report-date">--</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"></path><polyline points="14 2 14 8 20 8"></polyline><line x1="16" y1="13" x2="8" y2="13"></line><line x1="16" y1="17" x2="8" y2="17"></line><polyline points="10 9 9 9 8 9"></polyline></svg>
+                                    <span id="company-reg">--</span>
+                                </div>
+                                <div class="flex items-center gap-2">
+                                    <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" class="text-slate-400"><path d="M21 10c0 7-9 13-9 13s-9-6-9-13a9 9 0 0 1 18 0z"></path><circle cx="12" cy="10" r="3"></circle></svg>
+                                    <span id="company-location">--</span>
+                                </div>
+                            </div>
+                        </div>
+                    </div>
+                </div>
+            </header>
+
+            <!-- Badges Area (Distinct Rows) -->
+            <div class="mb-10 pb-6 border-b border-slate-100 grid grid-cols-2 gap-8 print-break-inside">
+                <!-- Col 1: Capabilities -->
+                <div>
+                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Performance Capabilities</h4>
+                    <div id="performance-badges-container" class="flex flex-wrap gap-2">
+                        <!-- JS Injected -->
+                    </div>
+                </div>
+                
+                <!-- Col 2: Sector Verification -->
+                <div>
+                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-3">Sector Verification</h4>
+                    <div id="sector-badges-container" class="flex flex-wrap gap-2">
+                        <!-- JS Injected -->
+                    </div>
+                </div>
+            </div>
+
+            <!-- Overall Readiness (Two Column Layout) -->
+            <section class="mb-10 print-break-inside">
+                <div class="text-xs font-bold text-fm-slate400 uppercase tracking-widest mb-4">Overall Readiness</div>
+                
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-8 mb-8">
+                    
+                    <!-- Row 1 Left: Tier Barometer & Score -->
+                    <div class="bg-fm-taupe p-6 rounded-lg border border-slate-200 flex flex-col justify-between h-full transition-colors">
+                        <div class="flex justify-between items-start mb-4">
+                            <div>
+                                <div class="text-xs font-bold text-fm-slate400 uppercase tracking-widest mb-1">Score</div>
+                                <div class="flex items-end gap-2">
+                                    <span id="total-score" class="text-5xl font-bold text-fm-charcoal">0.0</span>
+                                    <span class="text-lg font-medium text-slate-400 mb-1">/ 5.0</span>
+                                </div>
+                            </div>
+                            <!-- Current Tier Badge -->
+                            <div id="tier-badge-container" class="text-right">
+                                <!-- JS Injected -->
+                            </div>
+                        </div>
+
+                        <!-- Barometer -->
+                        <div class="mt-auto pt-4 relative pb-6">
+                            <div class="flex justify-between text-[9px] font-bold text-slate-400 uppercase tracking-wide absolute top-0 w-full transform -translate-y-full mb-1">
+                                <span>Early</span>
+                                <span style="left: 60%; transform: translateX(-50%); position: absolute;">Growth</span>
+                                <span>Enterprise</span>
+                            </div>
+                            <div class="h-3 bg-slate-200 rounded-full w-full relative overflow-hidden flex mt-2">
+                                <div class="w-[60%] h-full bg-slate-300 border-r border-white"></div>
+                                <div class="w-[24%] h-full bg-slate-400 border-r border-white"></div>
+                                <div class="w-[16%] h-full bg-fm-boldGreen"></div>
+                            </div>
+                            <div id="barometer-marker" class="absolute top-2 w-0.5 h-7 bg-fm-charcoal z-10 transition-all duration-1000" style="left: 0%">
+                                <div class="w-3 h-3 bg-fm-charcoal rounded-full -ml-[5px] -mt-1.5 border-2 border-white"></div>
+                            </div>
+                            <div id="tier-gap-text" class="text-[10px] font-bold text-fm-darkGreen mt-3 text-center bg-white/60 rounded py-1 border border-slate-200">
+                                Calculating...
+                            </div>
+                        </div>
+                    </div>
+
+                    <!-- Row 1 Right: Radar Chart -->
+                    <div class="bg-white border border-slate-200 rounded-lg p-6 flex items-center justify-center h-full transition-colors">
+                        <div id="radar-chart" class="w-48 h-48"></div>
+                    </div>
+                </div>
+
+                <!-- Row 2: Executive Summary -->
+                <div class="mb-8">
+                    <h3 class="text-sm font-bold text-fm-charcoal mb-3">Executive Summary</h3>
+                    <div class="bg-white border border-slate-200 p-6 rounded-lg shadow-sm transition-colors">
+                        <p id="exec-summary" class="text-sm text-slate-600 leading-relaxed text-justify">
+                            Analysis pending.
+                        </p>
+                    </div>
+                </div>
+
+                <!-- Row 3: Strengths & Constraints (Swapped) -->
+                <div class="grid grid-cols-1 md:grid-cols-2 gap-4">
+                    <!-- Key Strengths (Left) -->
+                    <div class="bg-fm-paleGreen border border-fm-boldGreen p-4 rounded-lg flex flex-col h-full">
+                        <h4 class="text-[10px] font-bold text-fm-darkGreen uppercase tracking-widest mb-3 flex items-center gap-2">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><polyline points="20 6 9 17 4 12"></polyline></svg>
+                            Key Strengths
+                        </h4>
+                        <div id="strength-list" class="space-y-3">
+                             <!-- JS Injected -->
+                        </div>
+                    </div>
+
+                    <!-- Key Constraints (Right) -->
+                    <div class="bg-red-50 border border-red-100 p-4 rounded-lg flex flex-col h-full">
+                        <h4 class="text-[10px] font-bold text-red-800 uppercase tracking-widest mb-3 flex items-center gap-2">
+                            <svg width="12" height="12" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                            Key Constraints
+                        </h4>
+                        <div id="constraint-list" class="space-y-3">
+                            <!-- JS Injected -->
+                        </div>
+                    </div>
+                </div>
+            </section>
+
+            <!-- Detailed Breakdown -->
+            <div class="print-break-before"></div>
+            <div class="flex items-center gap-3 mb-6 pt-8">
+                <span class="w-1.5 h-6 bg-fm-boldGreen block"></span>
+                <h2 class="text-lg font-bold text-fm-charcoal">Core Protocols Breakdown</h2>
+            </div>
+
+            <div class="grid grid-cols-2 gap-6 mb-10" id="core-grid">
+                <!-- Cards injected via JS -->
+            </div>
+
+            <!-- Page Break for Print -->
+            <div class="print-break-before"></div>
+
+            <!-- Action Plan -->
+             <div class="flex items-center gap-3 mb-4 mt-8">
+                <span class="w-1.5 h-6 bg-amber-400 block"></span>
+                <h2 class="text-lg font-bold text-fm-charcoal">Critical Action Plan</h2>
+            </div>
+
+            <!-- Strategic Guidance Explainer -->
+            <div class="mb-6 bg-slate-50 border border-slate-200 rounded p-4 text-xs text-slate-600 leading-relaxed flex gap-3 print-break-inside">
+                <div class="flex-shrink-0 text-slate-400 mt-0.5">
+                    <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>
+                </div>
+                <div>
+                    <strong class="text-fm-charcoal block mb-1">Strategic Guidance</strong>
+                    This plan isolates commercial blockers. <strong class="text-slate-800">Mandatory</strong> items represent hard procurement gates (e.g., Legal, Security) that typically prevent contract signage. <strong class="text-slate-800">High Priority</strong> actions mitigate immediate deal-flow risks. Remediation should follow the priority order to minimize time-to-revenue.
+                </div>
+            </div>
+            
+            <div class="bg-white border border-slate-200 rounded-lg overflow-hidden mb-10 shadow-sm transition-colors">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-fm-taupe text-xs font-bold text-fm-slate400 uppercase tracking-widest border-b border-slate-200">
+                        <tr>
+                            <th class="px-6 py-3 w-1/3">Gap Identified / Context</th>
+                            <th class="px-6 py-3 w-1/4">Commercial Impact</th>
+                            <th class="px-6 py-3 w-1/4">Required Action</th>
+                            <th class="px-6 py-3 w-1/6 text-center">Type</th>
+                            <th class="px-6 py-3 w-1/12">Priority</th>
+                        </tr>
+                    </thead>
+                    <tbody id="action-table-body" class="divide-y divide-slate-100">
+                        <!-- Rows injected via JS -->
+                    </tbody>
+                </table>
+            </div>
+
+            <!-- Sector Specifics -->
+            <div id="sector-section" class="mb-12 print-break-inside">
+                 <div class="flex items-center gap-3 mb-6">
+                    <span class="w-1.5 h-6 bg-slate-800 block"></span>
+                    <h2 class="text-lg font-bold text-fm-charcoal">Sector Mandates</h2>
+                </div>
+                
+                <div class="space-y-6" id="sector-container">
+                    <!-- Sector Blocks injected via JS -->
+                </div>
+            </div>
+
+            <!-- Footer -->
+            <footer class="border-t border-slate-200 pt-8 mt-auto print-break-inside">
+                <div class="flex justify-between items-end">
+                    <div>
+                        <div class="font-bold text-fm-charcoal text-sm">Founders Match</div>
+                        <div class="text-xs text-slate-400 mt-1">Commercial Intent. Strategic Outcomes.</div>
+                    </div>
+                    <div class="text-right text-[10px] text-slate-400 max-w-xs leading-relaxed">
+                        This report is an automated readiness assessment. It does not constitute legal or financial advice. 
+                        Compliance status requires independent verification by corporate procurement teams.<br>
+                        <span id="footer-timestamp" class="text-slate-300 italic">Generated: --</span>
+                    </div>
+                </div>
+            </footer>
+        </div>
+    </div>
+
+    <script>
+        // --- CONSTANTS ---
+        const ICONS = {
+            lock: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="18" height="11" x="3" y="11" rx="2" ry="2"/><path d="M7 11V7a5 5 0 0 1 10 0v4"/></svg>`,
+            zap: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polygon points="13 2 3 14 12 14 11 22 21 10 12 10 13 2"/></svg>`,
+            briefcase: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><rect width="20" height="14" x="2" y="7" rx="2" ry="2"/><path d="M16 21V5a2 2 0 0 0-2-2h-4a2 2 0 0 0-2 2v16"/></svg>`,
+            trending: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><polyline points="22 7 13.5 15.5 8.5 10.5 2 17"/><polyline points="16 7 22 7 22 13"/></svg>`,
+            check: `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="3" stroke-linecap="round" stroke-linejoin="round"><polyline points="20 6 9 17 4 12"/></svg>`
+        };
+
+        const FINDINGS_DB = {
+            cor: {
+                high: ["Robust corporate structure", "Directors fully verified", "Clean Cap Table"],
+                low: ["Unverified UBO / Directors", "Missing Shareholders Agreement", "Inadequate Indemnity Limit"]
+            },
+            sec: {
+                high: ["SOC2 / ISO 27001 Certified", "Pen-test < 6 months", "MFA Enforced"],
+                low: ["No formal ISMS", "Pen-test outdated (>12mo)", "Disaster Recovery untested"]
+            },
+            ai: {
+                high: ["EU AI Act Class defined", "Human-in-the-loop active", "Training data logged"],
+                low: ["Undefined Regulatory Tier", "No 'Stop Button' protocol", "Training data provenance gaps"]
+            },
+            comm: {
+                high: ["Healthy Runway (>18mo)", "Enterprise MSA ready", "References verified"],
+                low: ["Runway < 6 months", "No Standard Rate Card", "Liability caps undefined"]
+            },
+            ops: {
+                high: ["SLA 99.9% supported", "24/7 Support Process", "Dedicated Account Mgmt"],
+                low: ["Best-effort SLA only", "No Incident Response Plan", "Key-person dependency"]
+            }
+        };
+
+        const CHECKLIST_DB = {
+            cor: [
+                { name: "Incorporation Status", req: true },
+                { name: "Beneficial Ownership (KYC)", req: true },
+                { name: "Verified Identity for Directors & PSCs", req: true },
+                { name: "IP Assignment (PIIAA)", req: true },
+                { name: "Registered Office", req: true },
+                { name: "Professional indemnity limit", req: true },
+                { name: "AI Accountability Owner", req: false },
+                { name: "Board of Directors", req: false },
+                { name: "Indemnity for 3rd-Party IP Claims", req: false },
+                { name: "Founder/Key-Person Vesting", req: false },
+                { name: "Authority Matrix", req: false },
+                { name: "Independent Director Rep.", req: false },
+                { name: "Board Committee Structure", req: false },
+                { name: "Cap Table Clarity", req: false },
+                { name: "Operating History", req: false },
+                { name: "How long trading?", req: false },
+                { name: "Parent-Subsidiary Relationship", req: false },
+                { name: "Subsidiary/Holding Setup", req: false },
+                { name: "Cross-Border Compliance", req: false },
+                { name: "Employee vs. Contractor Ratio", req: false },
+                { name: "Chain of Title (IP) Warranty", req: false },
+                { name: "Authorized Filing Agent Used?", req: false },
+                { name: "Cap table clean & assigned?", req: false },
+                { name: "Board-Level ESG Oversight", req: false },
+                { name: "Formal DE&I policy?", req: false },
+                { name: "Gender Pay Gap Percentage", req: false },
+                { name: "Executive ESG Linkage", req: false }
+            ],
+            sec: [
+                { name: "Modern Slavery & Human Rights Policy", req: true },
+                { name: "Privacy policy", req: true },
+                { name: "Data encrypted rest & transit?", req: true },
+                { name: "Disaster recovery tested?", req: true },
+                { name: "Data Processing Agmt (DPA)", req: true },
+                { name: "Tax Good Standing Certificate", req: true },
+                { name: "Right to Work Verification", req: true },
+                { name: "Anti-Bribery & Corruption (ABC)", req: true },
+                { name: "Indemnity for 3rd-Party IP", req: true },
+                { name: "Tech Stack Location (Data Residency)", req: true },
+                { name: "Cloud Infrastructure Provider", req: true },
+                { name: "Anti-Corruption & Bribery Training", req: false },
+                { name: "Whistleblowing Channels", req: false },
+                { name: "ISMS cert (SOC2 / ISO)", req: false },
+                { name: "Penetration testing", req: false },
+                { name: "Automated Deprovisioning (SCIM)", req: false },
+                { name: "SAML 2.0 / OIDC Support", req: false },
+                { name: "Adaptive MFA Implementation", req: false },
+                { name: "Immutable Audit Logs", req: false },
+                { name: "PII Redaction in Logs", req: false },
+                { name: "Network Segregation", req: false },
+                { name: "Vulnerability Patch Window", req: false },
+                { name: "Software Bill of Materials (SBOM)", req: false },
+                { name: "Incident Response Testing", req: false },
+                { name: "NIS2 / DORA Scope Check", req: false },
+                { name: "Employee Classification Audit", req: false },
+                { name: "Anti-Harassment Training", req: false },
+                { name: "Whistleblower Mechanism", req: false },
+                { name: "Export Control Review", req: false },
+                { name: "Transfer Pricing Policy", req: false },
+                { name: "SSO and SCIM support (Basic)", req: false }
+            ],
+            ai: [
+                { name: "AI Act compliance tier?", req: true },
+                { name: "AI Act Risk Classification?", req: true },
+                { name: "Prohibited Practice Check?", req: true },
+                { name: "AI System Disclosure process?", req: true },
+                { name: "Hold training data?", req: false },
+                { name: "Training Data Provenance?", req: false },
+                { name: "Data Quality Assessment?", req: false },
+                { name: "Bias Testing Protocols?", req: false },
+                { name: "Model Cards Documented?", req: false },
+                { name: "Human Oversight Model?", req: false },
+                { name: "Stop Button Protocol?", req: false },
+                { name: "AI Incident Response plan?", req: false },
+                { name: "IP Indemnity Offered?", req: false },
+                { name: "Explainability Level?", req: false }
+            ],
+            comm: [
+                { name: "Annual Recurring Revenue (ARR)", req: true },
+                { name: "Runway (Months)", req: true },
+                { name: "Contractual liability cap", req: true },
+                { name: "Standard Enterprise Terms", req: true },
+                { name: "Enterprise references", req: false },
+                { name: "Enterprise Customer Count", req: false },
+                { name: "Product-Market Fit Evidence", req: false },
+                { name: "Pilot Track Record", req: false },
+                { name: "Standard rate card?", req: false },
+                { name: "Go-to-Market (GTM) Plan", req: false },
+                { name: "Unit Economics / Lifecycle", req: false },
+                { name: "Customer Success Process", req: false },
+                { name: "What is your GVA?", req: false },
+                { name: "Decision unit mapped?", req: false }
+            ],
+            ops: [
+                { name: "Product stage", req: true },
+                { name: "SLA commitment", req: true },
+                { name: "Integration Capability", req: true },
+                { name: "Business Continuity Plan (BCP)", req: true },
+                { name: "Disaster Recovery (DR) Backups", req: true },
+                { name: "Supply Chain Social Audits", req: false },
+                { name: "Workplace Safety Incidents", req: false },
+                { name: "Supply chain audited?", req: false },
+                { name: "Team Size (FTEs)", req: false },
+                { name: "Back Office Capability", req: false },
+                { name: "ROI Tracking & Analytics", req: false },
+                { name: "Change Management Policy", req: false },
+                { name: "Release Verification Mechanism", req: false },
+                { name: "Dependency Mapping", req: false },
+                { name: "System Throttling/Limits", req: false },
+                { name: "Operational resilience (RTO/RPO)", req: false },
+                { name: "Recovery Time Objective (RTO)", req: false },
+                { name: "Recovery Point Objective (RPO)", req: false },
+                { name: "Named Account Management", req: false },
+                { name: "Dedicated support system?", req: false },
+                { name: "Key-Person Risk Mitigation", req: false },
+                { name: "Calendar of Corporate Events", req: false },
+                { name: "Local multiplier effect", req: false }
+            ]
+        };
+
+        const SECTORS_DB = {
+            "fin": {
+                name: "Financial Services",
+                items: [
+                    // --- REQUIRED SECTION (Impact: Licensing & Baseline) ---
+                    { name: "Is the entity FCA authorised?", impact: "Regulatory Licence" },
+                    { name: "AML / KYC Control Framework?", impact: "De-risking Financial Crime" },
+                    { name: "DORA ICT Risk Framework?", impact: "EU Market Block" },
+                    { name: "Important Business Services (IBS)?", impact: "Harm Mitigation Mapping" },
+
+                    // --- OPTIONAL SECTION (Impact: Bank Mandate & Maturity) ---
+                    { name: "Tested Impact Tolerances?", impact: "OpRes Proof" },
+                    { name: "Consumer Duty Evidence?", impact: "Retail Outcome Maturity" },
+                    { name: "Threat-Led Pen Testing (TLPT)?", impact: "Advanced Cyber Defense" },
+                    { name: "Register of Information (RoI)?", impact: "Supply Chain Transparency" },
+                    { name: "Op Resilience Self-Assessment?", impact: "Regulatory Gold Standard" },
+                    { name: "PCI-DSS / PSD3 Compliance?", impact: "Payments requirement" }
+                ]
+            },
+            "health": {
+                name: "Healthcare",
+                items: [
+                    // --- REQUIRED SECTION (Impact: Clinical Safety & IG) ---
+                    { name: "DPIA for this solution?", impact: "UK GDPR Health Data Compliance" },
+                    { name: "Caldicott Guardian named?", impact: "Patient Confidentiality Mandate" },
+                    { name: "Cyber Essentials (Basic)?", impact: "NHS Baseline Security" },
+                    { name: "NHS IG Training Log?", impact: "Data Security Awareness (95% Floor)" },
+
+                    // --- OPTIONAL SECTION (Impact: Strategic Differentiators) ---
+                    { name: "NHS Carbon Reduction Plan?", impact: "PPN 06/21 Net Zero Alignment" },
+                    { name: "FHIR / HL7 API Support?", impact: "Clinical Record Interoperability" },
+                    { name: "Cyber Essentials Plus?", impact: "Independent Security Verification" },
+                    { name: "AI Clinical Bias Evidence?", impact: "Algorithmic Equity Verification" },
+                    { name: "Safety Mgmt System (CSMS)?", impact: "DCB0129 Clinical Safety Case" },
+                    { name: "Live Clinical Hazard Log?", impact: "Proactive Risk Management" },
+                    { name: "Clinical Negligence PI?", impact: "Professional Liability Coverage" },
+                    { name: "WCAG 2.1 AA Accessibility?", impact: "Inclusive Patient Experience" },
+                    { name: "CQC Registered Status?", impact: "Regulated Activity Authorization" },
+                    { name: "DSPT 'Standards Exceeded'?", impact: "High-Tier Data Trust Rating" }
+                ]
+            },
+            "gov": {
+                name: "Public Sector",
+                items: [
+                    // --- REQUIRED SECTION (Impact: Statutory & Baseline) ---
+                    { name: "Cyber Essentials (Basic)", impact: "MoD/Gov Technical Floor" },
+                    { name: "WCAG 2.1 AA Compliance", impact: "Digital Accessibility Mandate" },
+                    { name: "Social Value Policy Defined", impact: "Tender Scoring Baseline" },
+                    { name: "Modern Slavery Compliance", impact: "Supply Chain Integrity" },
+                    { name: "Ins. (PI/PL £5m+ Min)", impact: "CCS Contractual Floor" },
+
+                    // --- OPTIONAL SECTION (Impact: Framework & High Maturity) ---
+                    { name: "Cyber Essentials Plus", impact: "High-Trust Verification" },
+                    { name: "PPN 06/21 Carbon Plan", impact: "Net Zero Contract Eligibility" },
+                    { name: "Framework Presence", impact: "Procurement Shortcut" },
+                    { name: "Central Digital Platform ID", impact: "2026 'Tell Us Once' Readiness" },
+                    { name: "Security Clearance (SC)", impact: "Classified Project Capacity" },
+                    { name: "Quantitative Impact Data", impact: "Evidence-Based Reporting" },
+                    { name: "Social ROI (SROI) Data", impact: "Strategic Value Quantification" },
+                    { name: "ISO 9001 Quality Mgmt", impact: "Operational Maturity Signal" },
+                    { name: "Prompt Payment (>95%)", impact: "PPN 10/23 Supply Chain Health" },
+                    { name: "SME Supply Chain Spend %", impact: "Tier 2 Economic Impact" }
+                ]
+            },
+            "aero": {
+                name: "Aerospace, defence & industrial",
+                items: [
+                    // --- REQUIRED SECTION (Impact: Compliance & Security Floor) ---
+                    { name: "Is AS9100 / Def Stan certified?", impact: "Aviation Quality Standard" },
+                    { name: "Is ITAR / EAR / Export compliant?", impact: "Global Trade Authorization" },
+                    { name: "Is Cyber Essentials Plus held?", impact: "MOD Digital Security Floor" },
+                    { name: "Is NCAGE / CAGE Code held?", impact: "NATO Supply Chain ID" },
+
+                    // --- OPTIONAL SECTION (Impact: Industry Maturity & Frameworks) ---
+                    { name: "Is JOSCAR registered?", impact: "Defense Prime Pre-qualification" },
+                    { name: "Is Nadcap accredited?", impact: "Special Process Certification" },
+                    { name: "AS9102 FAIR process in place?", impact: "Production Verification Proof" },
+                    { name: "Safety Management System (SMS)?", impact: "EASA/FAA Governance Alignment" },
+                    { name: "EASA / FAA Part 21 Approvals?", impact: "Airworthiness Authorization" },
+                    { name: "Social Value Model Alignment?", impact: "MOD Tender Scoring Weight" }
+                ]
+            },
+            "retail": {
+                name: "Retail",
+                items: [
+                    // --- REQUIRED SECTION (Impact: Ethical Sourcing & Compliance) ---
+                    { name: "Sedex / SMETA Audit?", impact: "Ethical Supply Chain Mandate" },
+                    { name: "GS1 GTIN Alignment?", impact: "Universal Product Identification" },
+                    { name: "Product Safety Certs?", impact: "UKCA/CE Safety Compliance" },
+                    { name: "Consumer Data Security", impact: "Customer PII Protection" },
+
+                    // --- OPTIONAL SECTION (Impact: Omnichannel & Logistics Maturity) ---
+                    { name: "EDI Support (AS2/SFTP)", impact: "ERP Automated Integration" },
+                    { name: "Item-Level Traceability", impact: "2026 Transparency Benchmark" },
+                    { name: "Real-time Inventory API", impact: "Out-of-Stock Prevention" },
+                    { name: "Circular Economy Plan", impact: "Product Life-cycle Sustainability" },
+                    { name: "Logistics (OTIF) %", impact: "Supply Stability Reliability" },
+                    { name: "RFID Tagging Ready?", impact: "Automated Stock Inventory" },
+                    { name: "Tier 2/3 Supplier Map", impact: "Global Value Chain Transparency" },
+                    { name: "Returns Automation?", impact: "Reverse Logistics Efficiency" },
+                    { name: "Supplier Diversity %", impact: "Social Value ESG Target" },
+                    { name: "REACH / RoHS Compliant", impact: "Hazardous Substance Restriction" },
+                    { name: "Last-Mile Integration", impact: "Modern Delivery Readiness" }
+                ]
+            },
+             "telecom": {
+                name: "Telecoms & media",
+                items: [
+                    // --- REQUIRED SECTION (Impact: Licensing & Statutory Floor) ---
+                    { name: "ISO 27011 / CAS(T) held?", impact: "Carrier-Grade Security Standard" },
+                    { name: "Ofcom / Regulatory Statement?", impact: "Communications License Compliance" },
+                    { name: "TSA 2021 Scope Check?", impact: "Statutory Security Duty" },
+                    { name: "OSA / DSA Categorisation?", impact: "Safety/Content Liability Class" },
+
+                    // --- OPTIONAL SECTION (Impact: Infrastructure & Trust) ---
+                    { name: "Content DRM Implementation", impact: "Proprietary IP Protection" },
+                    { name: "TSA Code of Practice Audit?", impact: "2026 Milestone Wave Readiness" },
+                    { name: "Signaling Plane Protection?", impact: "SS7 / Diameter Core Security" },
+                    { name: "Age Verification Systems?", impact: "Minors' Protection Mandate" },
+                    { name: "Content Moderation SLAs?", impact: "Illegal Content Removal Flow" },
+                    { name: "Infrastructure Uptime (5 9s)?", impact: "Mission-Critical SLA" },
+                    { name: "5G Security Specs Alignment", impact: "Virtualized Network Integrity" },
+                    { name: "PSIA for Digital Services?", impact: "Privacy-Security Risk Mapping" },
+                    { name: "Network Latency Performance", impact: "Edge / Real-time Media Readiness" },
+                    { name: "Sub-processor Data Loc.", impact: "Data Sovereignty Transparency" }
+                ]
+            },
+            "sus": { 
+                name: "Sustainability", 
+                items: [
+                    // --- REQUIRED SECTION (Impact: CSRD & Regulatory Floor) ---
+                    { name: "Scope 1 & 2 Emissions", impact: "Direct & Energy Carbon Disclosure" },
+                    { name: "Climate Transition Plan", impact: "Paris Agreement 1.5°C Alignment" },
+                    { name: "Emissions Reporting Level", impact: "Reporting Boundary Verification" },
+
+                    // --- OPTIONAL SECTION (Impact: Strategic ESG Maturity) ---
+                    { name: "Scope 3 Value Chain Data", impact: "Total Indirect Footprint Transparency" },
+                    { name: "Double Materiality (DMA)", impact: "Impact vs. Financial Risk Matrix" },
+                    { name: "Hotspot Breakdown", impact: "Targeted Decarbonization Strategy" },
+                    { name: "Product Carbon Footprint", impact: "Unit-Level Carbon Intensity" },
+                    { name: "Embodied Carbon (Cloud)", impact: "Digital Supply Chain Accountability" },
+                    { name: "Automated Reporting", impact: "Real-time Stakeholder Transparency" },
+                    { name: "Recyclability Plan", impact: "Circular Economy Compliance" },
+                    { name: "Energy by Source", impact: "Renewable Energy Transition Proof" },
+                    { name: "Nature Risk Screening", impact: "TNFD Biodiversity Alignment" }
+                ]
+            },
+        };
+
+        const MOCK_COMPANIES = [
+            { 
+                name: "Sterling FinTech Solutions",
+                address: "1 Canada Square, Canary Wharf, London, E14 5AB",
+                country: "United Kingdom",
+                reg: "08889999",
+                type: "perfect" // Trigger for perfect score
+            },
+            { 
+                name: "Acme Innovations Ltd", 
+                address: "123 Innovation Dr, London, EC2A 4NE", 
+                country: "United Kingdom", 
+                reg: "09876543",
+                type: "random"
+            },
+            { 
+                name: "Nebula AI Systems", 
+                address: "Torstraße 15, Berlin, 10119", 
+                country: "Germany", 
+                reg: "HRB 54321",
+                type: "random"
+            },
+            { 
+                name: "GreenFlow Dynamics", 
+                address: "Birger Jarlsgatan 2, Stockholm, 114 34", 
+                country: "Sweden", 
+                reg: "556000-1234",
+                type: "random"
+            },
+            { 
+                name: "Quantum Ledger Inc", 
+                address: "450 Park Avenue South, New York, NY 10016", 
+                country: "USA", 
+                reg: "DE-8765432",
+                type: "random"
+            },
+            { 
+                name: "Vertex Health Solutions", 
+                address: "32 Rue de Monceau, Paris, 75008", 
+                country: "France", 
+                reg: "RCS 890 123 456",
+                type: "random"
+            }
+        ];
+
+        // --- GLOBAL STATE ---
+        let currentReportData = null;
+
+        // --- DATA LOADERS ---
+        function handleJsonUpload(event) {
+            const file = event.target.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = function(e) {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    processJsonData(json);
+                } catch (err) {
+                    alert("Error parsing JSON: " + err.message);
+                }
+            };
+            reader.readAsText(file);
+        }
+
+        function processJsonData(json) {
+            console.log("Processing uploaded JSON:", json);
+            
+            // Map JSON to Report Structure
+            const scores = {
+                cor: parseFloat(json.scores["1"]) || 0,
+                sec: parseFloat(json.scores["2"]) || 0,
+                ai: parseFloat(json.scores["3"]) || 0,
+                comm: parseFloat(json.scores["4"]) || 0,
+                ops: parseFloat(json.scores["5"]) || 0
+            };
+            
+            const overall = (Object.values(scores).reduce((a, b) => a + b, 0) / 6).toFixed(1);
+
+            // Determine Sector
+            let sectorData = [];
+            if (json.selected_sector && SECTORS_DB[json.selected_sector]) {
+                const secDef = SECTORS_DB[json.selected_sector];
+                // Map status from sector_answers if available, else random or true based on context
+                // For simplicity in this demo view, we'll map existing answers or assume passed based on score
+                const items = secDef.items.map(item => ({
+                    ...item,
+                    status: true // In a real mapping, we'd check json.sector_answers[key]
+                }));
+                sectorData.push({ name: secDef.name, items: items });
+            }
+
+            // Construct Report Data Object
+            const reportData = {
+                timestamp: new Date(json.timestamp).toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+                company: json.company_info.name,
+                location: `${json.company_info.address.city}, ${json.company_info.country}`,
+                country: json.company_info.country,
+                reg: json.company_info.reg_no || "N/A",
+                overallScore: overall,
+                scores: scores,
+                sectors: sectorData,
+                criticalGaps: [], // Logic to generate gaps based on scores would go here
+                topStrengths: [], // Logic to generate strengths
+                topConstraints: [], 
+                dimensions: [
+                    { id: 'cor', title: 'Corporate Structure', icon: 'building', desc: 'Legal & Financial Foundation' },
+                    { id: 'sec', title: 'Security & Compliance', icon: 'shield', desc: 'Data Protection & ISO' },
+                    { id: 'ai', title: 'AI Governance', icon: 'cpu', desc: 'EU AI Act Alignment' },
+                    { id: 'comm', title: 'Commercial', icon: 'briefcase', desc: 'Enterprise Sales Readiness' },
+                    { id: 'ops', title: 'Operations', icon: 'settings', desc: 'Resilience & Support' }
+                ]
+            };
+
+            // Re-use existing gap/strength logic helper
+            enrichReportData(reportData);
+            
+            // Render
+            renderReport(reportData);
+        }
+
+        // --- MOCK DATA GENERATOR ---
+        function generateMockData(forcedType) {
+            try {
+                let companyInfo;
+                if (forcedType === true) { 
+                    companyInfo = MOCK_COMPANIES.find(c => c.type === 'perfect');
+                } else {
+                    const currentNameEl = document.getElementById('company-name');
+                    const currentName = currentNameEl ? currentNameEl.innerText : '';
+                    for(let i=0; i<20; i++) {
+                        companyInfo = MOCK_COMPANIES[Math.floor(Math.random() * MOCK_COMPANIES.length)];
+                        if (companyInfo.name !== currentName && companyInfo.type !== 'perfect') break;
+                    }
+                }
+                
+                let scores, sectorName, sectorItems;
+
+                if (companyInfo.type === 'perfect') {
+                    scores = { core: 5.0, sec: 5.0, ai: 5.0, comm: 5.0, ops: 5.0 };
+                    sectorName = "Financial Services";
+                    sectorItems = SECTORS_DB["fin"].items.map(item => ({ ...item, status: true }));
+                } else {
+                    const profiles = ['early', 'growth', 'enterprise'];
+                    const profile = profiles[Math.floor(Math.random() * profiles.length)];
+                    let baseScore = profile === 'growth' ? 3.5 : (profile === 'enterprise' ? 4.5 : 2.5);
+                    const getScore = () => Math.min(5, Math.max(1, (baseScore + (Math.random() * 1.5 - 0.75)))).toFixed(1);
+
+                    scores = {
+                        cor: getScore(),
+                        sec: getScore(),
+                        ai: getScore(),
+                        comm: getScore(),
+                        ops: getScore()
+                    };
+
+                    const sectorKeys = Object.keys(SECTORS_DB);
+                    const secKey = sectorKeys[Math.floor(Math.random() * sectorKeys.length)];
+                    sectorName = SECTORS_DB[secKey].name;
+                    sectorItems = SECTORS_DB[secKey].items.map(item => ({ ...item, status: Math.random() > 0.3 }));
+                }
+
+                const scoreValues = Object.values(scores).map(s => parseFloat(s));
+                const overall = (scoreValues.reduce((a, b) => a + b, 0) / scoreValues.length).toFixed(1);
+
+                const data = {
+                    timestamp: new Date().toLocaleDateString('en-GB', { day: 'numeric', month: 'long', year: 'numeric' }),
+                    company: companyInfo.name,
+                    location: companyInfo.address,
+                    country: companyInfo.country,
+                    reg: companyInfo.reg,
+                    overallScore: overall,
+                    scores: scores,
+                    sectors: [{ name: sectorName, items: sectorItems }],
+                    criticalGaps: [],
+                    topStrengths: [],
+                    topConstraints: [],
+                    dimensions: [
+                        { id: 'cor', title: 'Corporate Structure', icon: 'building', desc: 'Legal & Financial Foundation' },
+                        { id: 'sec', title: 'Security & Compliance', icon: 'shield', desc: 'Data Protection & ISO' },
+                        { id: 'ai', title: 'AI Governance', icon: 'cpu', desc: 'EU AI Act Alignment' },
+                        { id: 'comm', title: 'Commercial', icon: 'briefcase', desc: 'Enterprise Sales Readiness' },
+                        { id: 'ops', title: 'Operations', icon: 'settings', desc: 'Resilience & Support' }
+                    ]
+                };
+                
+                enrichReportData(data);
+                return data;
+
+            } catch(e) {
+                console.error('Error in generateMockData():', e);
+                throw e;
+            }
+        }
+
+        // Shared Logic to generate gaps/strengths from scores
+        function enrichReportData(data) {
+             const gaps = [];
+            if (data.scores.comm < 3.5) gaps.push({ area: "Commercial", issue: "Short Financial Runway", context: "Runway < 6 months signals potential insolvency risk to procurement teams.", impact: "High Risk of contract termination.", fix: "Secure bridge or escrow", priority: "High", req: "Mandatory" });
+            if (data.scores.sec < 3.5) gaps.push({ area: "Security", issue: "Missing ISO/SOC2", context: "Lack of independent security verification fails standard Vendor Risk Assessment (VRA).", impact: "Sales cycle block.", fix: "Initiate Type 1 Audit", priority: "High", req: "Mandatory" });
+            if (data.scores.ai < 3.0) gaps.push({ area: "AI", issue: "AI Act Unclassified", context: "Undefined regulatory tier creates unlimited liability exposure for the buyer.", impact: "Legal Compliance Block.", fix: "Complete Tier Assessment", priority: "High", req: "Mandatory" });
+            if (data.scores.cor < 4.0) gaps.push({ area: "Corporate", issue: "Insurance Limit Low", context: "Coverage is below standard enterprise indemnity thresholds.", impact: "Contract negotiation delay.", fix: "Increase PI/Cyber to £5m", priority: "Med", req: "Optional" });
+            
+            if (gaps.length === 0 && data.overallScore < 5.0) gaps.push({ area: "Operations", issue: "SLA Definition", context: "Undefined service levels create ambiguity in support expectations.", impact: "Service Expectation Mismatch.", fix: "Formalize 99.9% Uptime SLA", priority: "Low", req: "Optional" });
+
+            const strengthDescs = {
+                cor: { title: "Structure", desc: "Clean legal setup minimizes liability." },
+                sec: { title: "Security", desc: "High maturity defensive posture." },
+                ai: { title: "AI Gov", desc: "Regulatory alignment de-risks deployment." },
+                comm: { title: "Commercial", desc: "Enterprise-ready terms and runway." },
+                ops: { title: "Operations", desc: "Support infrastructure built for scale." }
+            };
+
+            const strengths = [];
+            Object.keys(data.scores).forEach(key => {
+                if (data.scores[key] >= 3.5) {
+                    strengths.push({ key: key, score: data.scores[key], ...strengthDescs[key] });
+                }
+            });
+            strengths.sort((a, b) => b.score - a.score);
+
+            const constraints = [];
+            Object.keys(data.scores).forEach(key => {
+                if (data.scores[key] < 3.5) {
+                    constraints.push({ key: key, score: data.scores[key], title: strengthDescs[key].title });
+                }
+            });
+            constraints.sort((a, b) => a.score - b.score);
+
+            data.criticalGaps = gaps.slice(0, 5);
+            data.topStrengths = strengths.slice(0, 3);
+            data.topConstraints = constraints.slice(0, 3);
+        }
+
+        // --- CORE FUNCTIONS (Global Scope) ---
+        function toggleDetails(id) {
+            const el = document.getElementById(id);
+            const btn = document.getElementById('btn-' + id);
+            
+            if (el.classList.contains('open')) {
+                el.classList.remove('open');
+                btn.innerHTML = `<span class="transition-transform inline-block">▸</span> View Protocol Checklist`;
+            } else {
+                el.classList.add('open');
+                btn.innerHTML = `<span class="transition-transform inline-block rotate-90">▸</span> Hide Protocol Checklist`;
+            }
+        }
+        
+        function handleGenerateClick(forcePerfect = false) {
+            // Visual feedback
+            const btn = forcePerfect ? document.getElementById('btn-force-sterling') : document.getElementById('btn-generate');
+            const originalText = btn.innerHTML;
+            btn.innerHTML = `
+                <svg class="animate-spin -ml-1 mr-2 h-4 w-4 text-fm-darkGreen" xmlns="http://www.w3.org/2000/svg" fill="none" viewBox="0 0 24 24">
+                    <circle class="opacity-25" cx="12" cy="12" r="10" stroke="currentColor" stroke-width="4"></circle>
+                    <path class="opacity-75" fill="currentColor" d="M4 12a8 8 0 018-8V0C5.373 0 0 5.373 0 12h4zm2 5.291A7.962 7.962 0 014 12H0c0 3.042 1.135 5.824 3 7.938l3-2.647z"></path>
+                </svg>
+                <span>Updating...</span>
+            `;
+            btn.disabled = true;
+
+            setTimeout(() => {
+                try {
+                    const data = generateMockData(forcePerfect);
+                    renderReport(data);
+                } catch(e) {
+                    alert('Error generating report: ' + e.message);
+                } finally {
+                    btn.innerHTML = originalText;
+                    btn.disabled = false;
+                }
+            }, 400); 
+        }
+
+        function handlePrintClick() {
+            window.print();
+        }
+
+        function renderReport(data) {
+            currentReportData = data;
+            
+            const container = document.getElementById('report-content');
+            if(container) {
+                container.classList.remove('fade-in');
+                void container.offsetWidth; // trigger reflow
+                container.classList.add('fade-in');
+            }
+
+            // Populate Fields
+            document.getElementById('report-date').innerText = data.timestamp;
+            document.getElementById('company-name').innerText = data.company;
+            document.getElementById('company-location').innerText = data.location;
+            document.getElementById('company-reg').innerText = data.reg;
+            document.getElementById('total-score').innerText = data.overallScore;
+            
+            const initials = data.company.split(' ').map(n => n[0]).join('').substring(0, 2).toUpperCase();
+            document.getElementById('company-logo').innerText = initials;
+
+            // --- BADGES ---
+            const perfContainer = document.getElementById('performance-badges-container');
+            const sectorContainer = document.getElementById('sector-badges-container');
+
+            const perfBadges = [
+                { name: "Risk-proof", icon: ICONS.lock, earned: data.scores.cor >= 4 && data.scores.sec >= 4 },
+                { name: "Future ready", icon: ICONS.zap, earned: data.scores.ai >= 4},
+                { name: "Commercial", icon: ICONS.briefcase, earned: data.scores.comm >= 4 && data.scores.cor >= 3 },
+                { name: "Scale ops", icon: ICONS.trending, earned: data.scores.ops >= 4 && data.scores.sec >= 3 }
+            ];
+
+            const sectorBadges = [];
+            data.sectors.forEach(sec => {
+                const isComplete = sec.items.every(i => i.status);
+                if(isComplete) {
+                    sectorBadges.push({ name: `${sec.name} Verified`, icon: ICONS.check, earned: true });
+                }
+            });
+            if(sectorBadges.length === 0) {
+                 sectorBadges.push({ name: "Pending Verification", icon: ICONS.check, earned: false });
+            }
+
+            const renderBadge = (b) => `
+                <div class="px-2 py-1 rounded border flex items-center gap-1.5 transition-all ${b.earned ? 'bg-[#D9EB31] border-[#D9EB31] text-[#2B2A2A]' : 'bg-white border-dashed border-slate-200 text-slate-300'}">
+                    <span class="${b.earned ? 'text-[#2B2A2A]' : 'text-slate-200'} scale-75">${b.icon}</span>
+                    <span class="text-[9px] font-bold uppercase tracking-wide">${b.name}</span>
+                </div>
+            `;
+
+            perfContainer.innerHTML = perfBadges.map(renderBadge).join('');
+            sectorContainer.innerHTML = sectorBadges.map(renderBadge).join('');
+
+            // --- TIER LOGIC & BAROMETER ---
+            const score = parseFloat(data.overallScore);
+            
+            let gapMsg = "";
+            let tierName = "Early Stage";
+            let currentTier = 3;
+
+            if (score >= 4.2) {
+                currentTier = 1;
+                tierName = "Enterprise Ready";
+                gapMsg = "Maximum Readiness Achieved";
+            } else if (score >= 3.0) {
+                currentTier = 2;
+                tierName = "Growth Stage";
+                const gap = (4.2 - score).toFixed(1);
+                gapMsg = `+${gap} pts to reach Enterprise Ready`;
+            } else {
+                currentTier = 3;
+                tierName = "Early Stage";
+                const gap = (3.0 - score).toFixed(1);
+                gapMsg = `+${gap} pts to reach Growth Stage`;
+            }
+
+            const tierBadgeContainer = document.getElementById('tier-badge-container');
+            tierBadgeContainer.innerHTML = `<span class="inline-block px-3 py-1 rounded text-xs font-bold ${currentTier === 1 ? 'bg-fm-boldGreen text-fm-darkGreen border border-fm-darkGreen' : 'bg-slate-100 text-slate-500 border border-slate-200'}">${tierName}</span>`;
+
+            document.getElementById('tier-gap-text').innerText = gapMsg;
+
+            const scoreMarker = document.getElementById('barometer-marker');
+            const markerPos = (score / 5) * 100;
+            if(scoreMarker) setTimeout(() => { scoreMarker.style.left = markerPos + "%"; }, 100);
+
+            // --- EXECUTIVE SUMMARY ---
+            const summaryEl = document.getElementById('exec-summary');
+            let summaryText = "";
+            if (score >= 4.2) {
+                summaryText = `The entity demonstrates exceptional maturity (Score: ${data.overallScore}), qualifying as "Enterprise Ready." Protocols across Security and Operations minimize vendor risk. Primary recommendation is to maintain DORA/AI Act alignment.`;
+            } else if (score >= 3.0) {
+                summaryText = `Strong commercial potential but exhibits specific compliance gaps typical of the "Growth Stage" (Score: ${data.overallScore}). While the core product is sound, attention is needed in formalizing Security (ISO/SOC2) or ESG documentation.`;
+            } else {
+                summaryText = `Current assessment (Score: ${data.overallScore}) indicates an "Early Stage" profile. Significant gaps in corporate governance or security protocols present a high risk for enterprise partners. Immediate remediation is required.`;
+            }
+            summaryEl.innerText = summaryText;
+            
+            // --- INSIGHTS ---
+            const gapContainer = document.getElementById('constraint-list');
+            const strContainer = document.getElementById('strength-list');
+
+            // Strengths (Left) - NOW FIRST
+            if (data.topStrengths.length > 0) {
+                 const major = data.topStrengths[0];
+                 const minors = data.topStrengths.slice(1, 3);
+                 let html = `
+                    <div class="mb-2 pb-2 border-b border-fm-boldGreen/30">
+                        <div class="text-[9px] font-bold text-fm-darkGreen/60 uppercase mb-0.5">Major Strength</div>
+                        <div class="text-xs font-bold text-fm-darkGreen leading-tight">High ${major.title}</div>
+                        <div class="text-[9px] text-fm-darkGreen leading-snug mt-0.5">${major.desc}</div>
+                    </div>
+                `;
+                minors.forEach(m => {
+                    html += `
+                    <div class="mt-1 flex items-center justify-between">
+                        <span class="text-[9px] font-bold text-fm-darkGreen/50 uppercase">Minor</span>
+                        <span class="text-[10px] font-medium text-fm-darkGreen">${m.title} proven</span>
+                    </div>`;
+                });
+                strContainer.innerHTML = html;
+            } else {
+                strContainer.innerHTML = `<div class="text-xs text-fm-darkGreen italic">Developing strengths.</div>`;
+            }
+
+            // Constraints (Right) - NOW SECOND
+            if (data.topConstraints.length > 0) {
+                const major = data.topConstraints[0];
+                const minors = data.topConstraints.slice(1, 3);
+                let html = `
+                    <div class="mb-2 pb-2 border-b border-red-100">
+                        <div class="text-[9px] font-bold text-red-500 uppercase mb-0.5">Major Constraint</div>
+                        <div class="text-xs font-bold text-red-900 leading-tight">Low ${major.title} Maturity</div>
+                        <div class="text-[9px] text-red-700 leading-snug mt-0.5">Score: ${major.score} - requires immediate focus.</div>
+                    </div>
+                `;
+                minors.forEach(m => {
+                    html += `
+                    <div class="mt-1 flex items-center justify-between">
+                        <span class="text-[9px] font-bold text-red-400 uppercase">Minor</span>
+                        <span class="text-[10px] font-medium text-red-800">${m.title} gap</span>
+                    </div>`;
+                });
+                gapContainer.innerHTML = html;
+            } else {
+                gapContainer.innerHTML = `<div class="text-xs text-fm-darkGreen italic">No critical constraints identified.</div>`;
+            }
+
+            // --- CORE CARDS ---
+            const grid = document.getElementById('core-grid');
+            grid.innerHTML = data.dimensions.map((dim, idx) => {
+                const key = dim.id; // use the dimension id so lookups match FINDINGS_DB / CHECKLIST_DB
+                const dimScore = parseFloat(data.scores[key]);
+                const percentage = (dimScore / 5) * 100;
+                
+                let barColor = 'bg-fm-boldGreen';
+                if(dimScore < 3.5) barColor = 'bg-amber-400';
+                if(dimScore < 2.5) barColor = 'bg-red-400';
+
+                const findingsList = dimScore >= 3.5 ? FINDINGS_DB[key].high : FINDINGS_DB[key].low;
+                const findingsToShow = findingsList.slice(0, 2); 
+                
+                // Sorting checklist items
+                const checklist = CHECKLIST_DB[key].map(item => {
+                    let vStatus = 'NO';
+                    // If score is 5.0, everything is passed. Otherwise random.
+                    if (data.overallScore >= 5.0) {
+                        vStatus = 'VERIFIED';
+                    } else {
+                         const rand = Math.random();
+                         if (rand < (dimScore / 6)) {
+                             vStatus = 'VERIFIED';
+                         } else if (rand < (dimScore / 3.5)) {
+                             vStatus = 'YES';
+                         } else {
+                             vStatus = 'NO';
+                         }
+                    }
+                    return { ...item, vStatus: vStatus };
+                }).sort((a, b) => {
+                    // 1. Required Incomplete (NO)
+                    // 2. Required Partially Complete (YES)
+                    // 3. Optional Incomplete (NO)
+                    // 4. Optional Partially Complete (YES)
+                    // 5. Required Complete (VERIFIED)
+                    // 6. Optional Complete (VERIFIED)
+                    const getWeight = (item) => {
+                        if (item.req && item.vStatus === 'NO') return 1;
+                        if (item.req && item.vStatus === 'YES') return 2;
+                        if (!item.req && item.vStatus === 'NO') return 3;
+                        if (!item.req && item.vStatus === 'YES') return 4;
+                        if (item.req && item.vStatus === 'VERIFIED') return 5;
+                        if (!item.req && item.vStatus === 'VERIFIED') return 6;
+                        return 7;
+                    };
+                    return getWeight(a) - getWeight(b);
+                });
+
+                return `
+                    <div class="bg-white border border-slate-200 p-5 rounded-lg protocol-card shadow-sm flex flex-col h-full">
+                        <div class="flex justify-between items-start mb-3">
+                            <div>
+                                <h3 class="font-bold text-fm-charcoal text-sm">${dim.title}</h3>
+                                <div class="text-[10px] text-slate-500 uppercase tracking-wide mt-0.5">${dim.desc}</div>
+                            </div>
+                            <div class="text-xl font-bold text-fm-charcoal">${dimScore}</div>
+                        </div>
+                        
+                        <div class="w-full bg-slate-100 h-1.5 rounded-full overflow-hidden mb-4">
+                            <div class="${barColor} h-full" style="width: ${percentage}%"></div>
+                        </div>
+
+                        <div class="mb-4">
+                            <h4 class="text-[10px] font-bold text-slate-400 uppercase mb-2">Key Findings</h4>
+                            <ul class="space-y-1">
+                                ${findingsToShow.map(f => `
+                                    <li class="text-xs text-slate-600 flex items-start gap-1.5">
+                                        <div class="w-1 h-1 rounded-full bg-slate-400 mt-1.5 flex-shrink-0"></div>
+                                        ${f}
+                                    </li>
+                                `).join('')}
+                            </ul>
+                        </div>
+
+                        <div class="mt-auto pt-3 border-t border-slate-100">
+                            <button type="button" id="btn-details-${key}" onclick="toggleDetails('details-${key}')" class="accordion-btn text-[10px] font-bold text-fm-darkGreen hover:underline w-full text-left outline-none flex items-center gap-1 cursor-pointer">
+                                <span class="transition-transform inline-block">▸</span> View Protocol Checklist
+                            </button>
+                            <div id="details-${key}" class="accordion-content mt-2 space-y-2 bg-slate-50 p-2 rounded custom-scrollbar overflow-y-auto">
+                                ${checklist.map(item => {
+                                    let badgeHtml = '';
+                                    let textClass = 'text-slate-700';
+                                    
+                                    if (item.vStatus === 'VERIFIED') {
+                                        badgeHtml = '<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-fm-boldGreen text-fm-darkGreen">Verified</span>';
+                                    } else if (item.vStatus === 'YES') {
+                                        badgeHtml = '<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-amber-100 text-amber-700">Yes</span>';
+                                    } else {
+                                        badgeHtml = '<span class="px-2 py-0.5 rounded text-[9px] font-bold uppercase tracking-wider bg-slate-200 text-slate-500">No</span>';
+                                        textClass = 'text-slate-400';
+                                    }
+                                    
+                                    return `
+                                    <div class="flex justify-between items-center text-xs border-b border-slate-100 last:border-0 py-1.5">
+                                        <span class="${textClass} leading-tight pr-2">${item.name} <span class="text-[9px] uppercase font-bold ml-1 ${item.req ? 'text-red-400' : 'text-slate-300'}">${item.req ? 'REQ' : ''}</span></span>
+                                        <div class="flex-shrink-0">
+                                            ${badgeHtml}
+                                        </div>
+                                    </div>
+                                    `;
+                                }).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+            }).join('');
+
+            // --- ACTION PLAN ---
+            const table = document.getElementById('action-table-body');
+            if (data.criticalGaps.length === 0) {
+                 table.innerHTML = `<tr><td colspan="5" class="px-6 py-8 text-center text-slate-500 italic">No critical gaps identified.</td></tr>`;
+            } else {
+                table.innerHTML = data.criticalGaps.map(gap => {
+                    let priorityColor = 'text-slate-600';
+                    if (gap.priority === 'High') priorityColor = 'text-red-600 font-bold';
+                    if (gap.priority === 'Med') priorityColor = 'text-amber-600 font-bold';
+                    
+                    let reqBadge = gap.req === 'Mandatory' 
+                        ? '<span class="px-2 py-0.5 rounded bg-slate-800 text-white text-[9px] uppercase font-bold tracking-wider">Mandatory</span>'
+                        : '<span class="px-2 py-0.5 rounded bg-slate-100 text-slate-500 text-[9px] uppercase font-bold tracking-wider">Optional</span>';
+
+                    return `
+                    <tr class="hover:bg-slate-50 transition-colors border-b border-slate-50 last:border-0">
+                        <td class="px-6 py-3">
+                            <div class="font-bold text-fm-charcoal text-xs">${gap.issue}</div>
+                            <div class="text-[10px] text-slate-400 mt-1 italic leading-tight"><span class="font-semibold text-slate-500 not-italic">Commercial Context:</span> ${gap.context}</div>
+                        </td>
+                        <td class="px-6 py-3 text-xs text-slate-600">${gap.impact}</td>
+                        <td class="px-6 py-3 text-xs text-slate-600 font-mono bg-slate-50 rounded">${gap.fix}</td>
+                        <td class="px-6 py-3 text-center">${reqBadge}</td>
+                        <td class="px-6 py-3 text-xs ${priorityColor}">${gap.priority}</td>
+                    </tr>
+                `}).join('');
+            }
+
+            // --- SECTORS ---
+            const detailedSectorContainer = document.getElementById('sector-container');
+            if (data.sectors.length === 0) {
+                detailedSectorContainer.innerHTML = `<div class="text-sm text-slate-500 italic">No specific sector mandates selected.</div>`;
+            } else {
+                detailedSectorContainer.innerHTML = data.sectors.map(sec => `
+                    <div class="bg-slate-50 border border-slate-200 rounded-lg p-4 transition-colors protocol-card">
+                        <h3 class="text-sm font-bold text-fm-charcoal mb-3">${sec.name} Protocols</h3>
+                        <div class="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-3">
+                            ${sec.items.map(item => `
+                                <div class="p-3 border rounded flex items-center justify-between ${item.status ? 'bg-white border-slate-200 shadow-sm' : 'bg-white border-dashed border-red-200'}">
+                                    <div class="overflow-hidden">
+                                        <div class="flex items-center gap-2 mb-1">
+                                            ${item.status ? 
+                                                `<div class="w-2 h-2 rounded-full bg-fm-boldGreen flex-shrink-0"></div>` : 
+                                                `<div class="w-2 h-2 rounded-full bg-red-400 flex-shrink-0"></div>`
+                                            }
+                                            <span class="text-xs font-bold text-fm-charcoal truncate">${item.name}</span>
+                                        </div>
+                                        <div class="text-[10px] text-slate-500 pl-4 truncate">${item.impact}</div>
+                                    </div>
+                                    <div class="text-[9px] font-bold ${item.status ? 'text-fm-darkGreen' : 'text-red-500'} ml-2">
+                                        ${item.status ? 'OK' : 'MISSING'}
+                                    </div>
+                                </div>
+                            `).join('')}
+                        </div>
+                    </div>
+                `).join('');
+            }
+            
+            // --- RADAR CHART ---
+            renderRadar(data.scores);
+        }
+
+        function renderRadar(scores) {
+            const values = Object.values(scores).map(s => parseFloat(s));
+            const labels = ['Corp', 'Sec', 'AI', 'Comm', 'Ops'];
+            
+            const size = 160; 
+            const center = size / 2;
+            const radius = 65;
+            const steps = 4;
+
+            let svg = `<svg width="100%" height="100%" viewBox="0 0 ${size} ${size}" class="overflow-visible">`;
+            
+            // Grid
+            for (let i = 1; i <= steps; i++) {
+                const r = (i / steps) * radius;
+                const points = labels.map((_, idx) => {
+                    const angle = (Math.PI * 2 * idx) / labels.length - Math.PI / 2;
+                    return `${center + r * Math.cos(angle)},${center + r * Math.sin(angle)}`;
+                }).join(' ');
+                svg += `<polygon points="${points}" fill="none" stroke="#E2E8F0" stroke-width="1"/>`;
+            }
+
+            // Data
+            const dataPoints = values.map((v, idx) => {
+                const r = (v / 5) * radius; // assuming max score 5
+                const angle = (Math.PI * 2 * idx) / labels.length - Math.PI / 2;
+                return { x: center + r * Math.cos(angle), y: center + r * Math.sin(angle) };
+            });
+            const polyPoints = dataPoints.map(p => `${p.x},${p.y}`).join(' ');
+
+            svg += `<polygon points="${polyPoints}" fill="#D9EB31" fill-opacity="0.5" stroke="#475609" stroke-width="2"/>`;
+
+            // Labels
+            labels.forEach((l, idx) => {
+                const angle = (Math.PI * 2 * idx) / labels.length - Math.PI / 2;
+                const r = radius + 15;
+                const x = center + r * Math.cos(angle);
+                const y = center + r * Math.sin(angle);
+                svg += `<text x="${x}" y="${y}" text-anchor="middle" dominant-baseline="middle" class="text-[8px] font-bold fill-slate-500 uppercase tracking-wide" style="font-family: 'Instrument Sans'">${l}</text>`;
+            });
+
+            svg += `</svg>`;
+            document.getElementById('radar-chart').innerHTML = svg;
+        }
+
+        // Initialize script
+        document.addEventListener('DOMContentLoaded', () => {
+            try {
+                // Initial Load (Default Random Mock)
+                const data = generateMockData(false);
+                renderReport(data);
+            } catch(e) {
+                console.error('Error during initialization:', e);
+                alert('Error loading report: ' + e.message + '\n\nStack: ' + e.stack);
+            }
+        });
+
+    </script>
+</body>
+</html>

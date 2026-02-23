@@ -1,0 +1,1418 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Founders Match | Readiness assessment</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind Config for Brand Colors -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        fm: {
+                            boldGreen: '#D9EB31', // Primary Brand Color
+                            darkGreen: '#475609', // Text & Borders
+                            paleGreen: '#ECF598', // Background Accents
+                            charcoal: '#2B2A2A',  // Primary Text
+                            mediumCharcoal: '#3E3E3E',
+                            taupe: '#F8F8F8',     // Background
+                            slate200: '#E2E8F0',
+                            slate400: '#94A3B8'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Instrument Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Instrument Sans', sans-serif; }
+        
+        /* Custom Tooltip Styling */
+        #tooltip {
+            position: fixed;
+            z-index: 50;
+            background-color: #2B2A2A;
+            color: white;
+            font-size: 0.75rem;
+            padding: 0.75rem;
+            border-radius: 0.375rem;
+            max-width: 20rem;
+            pointer-events: none;
+            opacity: 0;
+            transition: opacity 0.15s;
+            box-shadow: 0 10px 15px -3px rgba(0, 0, 0, 0.1);
+        }
+        #tooltip.visible { opacity: 1; }
+
+        /* Transitions */
+        .fade-in { animation: fadeIn 0.3s ease-out forwards; }
+        @keyframes fadeIn { from { opacity: 0; } to { opacity: 1; } }
+        
+        .bar-transition { transition: width 0.6s cubic-bezier(0.4, 0, 0.2, 1); }
+        
+        #progress-bar { width: 0%; }
+
+        /* Hide scrollbar for cleaner look */
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; }
+    </style>
+</head>
+<body class="bg-fm-taupe text-fm-charcoal min-h-screen pb-40">
+
+    <!-- Tooltip Element -->
+    <div id="tooltip"></div>
+
+    <div class="max-w-7xl mx-auto px-4 py-8">
+        
+        <!-- Header -->
+        <div class="flex justify-between items-center mb-8 border-b border-fm-slate200 pb-6">
+            <div class="flex items-center gap-4">
+                <div class="text-base font-bold tracking-tight">
+                    Founders Match <span class="text-fm-slate400 font-normal">| Readiness assessment</span>
+                </div>
+                <!-- Currency Selector -->
+                <div class="relative ml-4">
+                    <label for="currency-selector" class="text-xs font-bold text-fm-slate400 mr-2">Currency:</label>
+                    <select id="currency-selector" onchange="app.setCurrency(this.value)" class="text-xs font-bold bg-white border border-fm-slate200 rounded px-2 py-1 text-fm-charcoal focus:outline-none focus:border-fm-darkGreen cursor-pointer">
+                        <option value="£">GBP (£)</option>
+                        <option value="€">EUR (€)</option>
+                        <option value="$">USD ($)</option>
+                    </select>
+                </div>
+            </div>
+            <button onclick="app.resetAll()" class="text-xs font-bold text-fm-slate400 hover:text-red-600 transition-colors border border-fm-slate200 px-4 py-2 rounded bg-white">
+                Reset data
+            </button>
+        </div>
+
+        <!-- SECTION 1: ENTITY VERIFICATION -->
+        <section class="bg-white rounded-xl border border-fm-slate200 shadow-sm p-8 mb-8 transition-all hover:shadow-md">
+            <div class="flex justify-between items-start mb-6">
+                <div>
+                    <h2 class="text-lg font-bold">Entity verification</h2>
+                    <p class="text-sm text-slate-500">Confirm legal jurisdiction and status.</p>
+                </div>
+                <span class="bg-slate-100 text-slate-500 text-[10px] uppercase font-bold px-3 py-1 rounded">Step 1 of 3</span>
+            </div>
+
+            <div class="grid md:grid-cols-4 gap-6 mb-6">
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase">Registered name</label>
+                    <input type="text" id="regName" placeholder="e.g. Acme Innovations Ltd" class="w-full text-sm border border-slate-300 rounded p-3 focus:border-fm-darkGreen focus:ring-1 focus:ring-fm-darkGreen focus:outline-none transition-colors">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase">Country of registration</label>
+                    <div class="relative" id="country-dropdown-container">
+                        <button type="button" onclick="app.toggleCountryDropdown(event)" id="country-btn" class="w-full text-sm border border-slate-300 rounded p-3 bg-white focus:border-fm-darkGreen focus:ring-1 focus:ring-fm-darkGreen focus:outline-none transition-colors cursor-pointer flex justify-between items-center text-left">
+                            <span id="country-selected-text">United Kingdom</span>
+                            <svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="m6 9 6 6 6-6"/></svg>
+                        </button>
+                        <div id="country-menu" class="absolute z-50 w-full top-full mt-1 bg-white border border-slate-200 rounded shadow-lg max-h-60 overflow-y-auto hidden">
+                            <!-- Options injected by JS -->
+                        </div>
+                    </div>
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase">Registration no.</label>
+                    <input type="text" id="regNo" placeholder="e.g. 12345678" class="w-full text-sm border border-slate-300 rounded p-3 focus:border-fm-darkGreen focus:ring-1 focus:ring-fm-darkGreen focus:outline-none transition-colors">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase">Website</label>
+                    <input type="url" id="website" placeholder="https://" class="w-full text-sm border border-slate-300 rounded p-3 focus:border-fm-darkGreen focus:ring-1 focus:ring-fm-darkGreen focus:outline-none transition-colors">
+                </div>
+            </div>
+
+            <!-- Address Fields -->
+            <div class="grid md:grid-cols-4 gap-6 mb-6">
+                <div class="md:col-span-2 space-y-2">
+                    <label class="text-xs font-bold uppercase">Address line 1</label>
+                    <input type="text" id="addr1" placeholder="Street address" class="w-full text-sm border border-slate-300 rounded p-3 focus:border-fm-darkGreen focus:ring-1 focus:ring-fm-darkGreen focus:outline-none transition-colors">
+                </div>
+                <div class="md:col-span-2 space-y-2">
+                    <label class="text-xs font-bold uppercase">Address line 2</label>
+                    <input type="text" id="addr2" placeholder="Apartment, suite, unit (optional)" class="w-full text-sm border border-slate-300 rounded p-3 focus:border-fm-darkGreen focus:ring-1 focus:ring-fm-darkGreen focus:outline-none transition-colors">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase">City</label>
+                    <input type="text" id="city" placeholder="City" class="w-full text-sm border border-slate-300 rounded p-3 focus:border-fm-darkGreen focus:ring-1 focus:ring-fm-darkGreen focus:outline-none transition-colors">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase">County / State</label>
+                    <input type="text" id="state" placeholder="Region" class="w-full text-sm border border-slate-300 rounded p-3 focus:border-fm-darkGreen focus:ring-1 focus:ring-fm-darkGreen focus:outline-none transition-colors">
+                </div>
+                <div class="space-y-2">
+                    <label class="text-xs font-bold uppercase">Postcode / ZIP</label>
+                    <input type="text" id="zip" placeholder="Postcode" class="w-full text-sm border border-slate-300 rounded p-3 focus:border-fm-darkGreen focus:ring-1 focus:ring-fm-darkGreen focus:outline-none transition-colors">
+                </div>
+            </div>
+
+            <div class="mt-6 border-t border-fm-slate200 pt-6">
+                <label class="text-xs font-bold uppercase mb-3 block">Supporting documentation</label>
+                <button id="btn-doc_incorp" onclick="app.handleUpload('doc_incorp')" title="Upload incorporation certificate" aria-label="Upload incorporation certificate" class="px-6 py-3 rounded text-xs font-mono flex items-center gap-2 w-full md:w-auto justify-center transition-all border border-dashed border-slate-300 bg-fm-taupe text-slate-500 hover:bg-white hover:border-fm-darkGreen">
+                    <!-- Icon & Text injected by JS -->
+                </button>
+            </div>
+        </section>
+
+        <main class="grid lg:grid-cols-12 gap-8">
+            
+            <!-- LEFT COLUMN: Visualization -->
+            <div class="lg:col-span-4 space-y-6">
+                <section class="bg-white rounded-xl border border-fm-slate200 shadow-sm p-6 sticky top-8 flex flex-col">
+                    <div class="flex justify-between items-center mb-6">
+                        <h2 class="text-xs font-bold text-fm-slate400 uppercase tracking-widest">Assessment profile</h2>
+                        <div id="tier-badge" class="px-3 py-1 rounded-sm font-bold text-xs border transition-all">
+                            <!-- Tier Text -->
+                        </div>
+                    </div>
+
+                    <div class="chart-container mb-5 flex-shrink-0 flex justify-center">
+                        <div id="radar-chart" class="w-full max-w-[250px] aspect-square mx-auto">
+                            <!-- SVG injected by JS -->
+                        </div>
+                    </div>
+
+                    <div class="space-y-6 border-t border-fm-slate200 pt-6 flex-grow">
+                        <div>
+                            <div class="flex justify-between text-xs font-bold text-fm-charcoal mb-2">
+                                <span>Readiness index</span>
+                                <span id="progress-text">0%</span>
+                            </div>
+                            <div class="w-full bg-slate-100 rounded-full h-2 overflow-hidden">
+                                <div id="progress-bar" class="bg-fm-boldGreen h-full rounded-full bar-transition"></div>
+                            </div>
+                        </div>
+                        
+                        <div>
+                            <h3 class="text-[10px] font-bold text-fm-slate400 uppercase tracking-widest mb-3">Specialist badges</h3>
+                            <div id="badges-container" class="grid grid-cols-2 gap-2">
+                                <!-- Badges injected by JS -->
+                            </div>
+                        </div>
+                        
+                        <div id="sector-badges-wrapper" class="hidden border-t border-fm-slate200 pt-6">
+                            <h3 class="text-[10px] font-bold text-fm-slate400 uppercase tracking-widest mb-3">Sector badges earned</h3>
+                            <div id="sector-badges-container" class="grid grid-cols-1 gap-2">
+                                <!-- Sector badges injected by JS -->
+                            </div>
+                        </div>
+                    </div>
+                </section>
+            </div>
+
+            <!-- RIGHT COLUMN: Assessment Fields -->
+            <div class="lg:col-span-8 space-y-6">
+
+                <!-- Core Protocol Slide Panel -->
+                <section class="bg-white rounded-xl border border-fm-slate200 shadow-sm overflow-hidden">
+                    <div class="flex items-center justify-between px-6 py-4 border-b border-fm-slate200">
+                        <div class="flex items-center gap-3">
+                            <h2 class="text-xs font-bold text-fm-slate400 uppercase tracking-widest">Core protocol</h2>
+                            <span id="slide-counter" class="text-xs font-bold text-fm-charcoal bg-slate-100 px-2 py-0.5 rounded-full">1 / 5</span>
+                        </div>
+                        <div class="flex items-center gap-2">
+                            <button type="button" onclick="app.changeSlide(-1)" title="Previous slide" class="p-2 rounded border border-fm-slate200 hover:bg-slate-50 text-fm-charcoal transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M15 19l-7-7 7-7"/></svg>
+                            </button>
+                            <button type="button" onclick="app.changeSlide(1)" title="Next slide" class="p-2 rounded border border-fm-slate200 hover:bg-slate-50 text-fm-charcoal transition-colors">
+                                <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M9 5l7 7-7 7"/></svg>
+                            </button>
+                        </div>
+                    </div>
+                    <div id="protocol-container" class="min-h-[400px]">
+                        <!-- Protocol items injected by JS -->
+                    </div>
+                </section>
+
+                <!-- Sector Module Panel -->
+                <section class="bg-fm-charcoal rounded-xl border border-slate-800 shadow-sm overflow-hidden">
+                    <div class="px-6 py-4 border-b border-slate-700">
+                        <h2 class="text-xs font-bold text-slate-300 uppercase tracking-widest mb-3">Sector modules</h2>
+                        <div id="sector-tabs" class="flex flex-wrap gap-2">
+                            <!-- Tabs injected by JS -->
+                        </div>
+                    </div>
+                    <div id="sector-items" class="p-6 space-y-4">
+                        <!-- Sector items injected by JS -->
+                    </div>
+                </section>
+
+                <!-- Export -->
+                <div class="flex justify-end pb-8">
+                    <button onclick="app.downloadAssessment()" class="text-xs font-bold bg-fm-boldGreen text-fm-darkGreen border border-fm-darkGreen px-5 py-2.5 rounded hover:bg-fm-darkGreen hover:text-white transition-colors flex items-center gap-2">
+                        <svg xmlns="http://www.w3.org/2000/svg" class="w-4 h-4" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4"/></svg>
+                        Export assessment
+                    </button>
+                </div>
+
+            </div>
+        </main>
+    <script>
+        // ICONS
+        const ICONS = {
+            building: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M3 21V7a2 2 0 012-2h4V3h6v2h4a2 2 0 012 2v14M9 21v-6h6v6"/></svg>`,
+            shield: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M12 22s8-4 8-10V5l-8-3-8 3v7c0 6 8 10 8 10z"/></svg>`,
+            zap: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`,
+            zapSm: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M13 2L3 14h9l-1 8 10-12h-9l1-8z"/></svg>`,
+            globe: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><circle cx="12" cy="12" r="10"/><path stroke-linecap="round" stroke-linejoin="round" d="M2 12h20M12 2a15.3 15.3 0 014 10 15.3 15.3 0 01-4 10 15.3 15.3 0 01-4-10 15.3 15.3 0 014-10z"/></svg>`,
+            users: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><path stroke-linecap="round" stroke-linejoin="round" d="M17 21v-2a4 4 0 00-4-4H5a4 4 0 00-4 4v2"/><circle cx="9" cy="7" r="4"/><path stroke-linecap="round" stroke-linejoin="round" d="M23 21v-2a4 4 0 00-3-3.87M16 3.13a4 4 0 010 7.75"/></svg>`,
+            activity: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><polyline points="22 12 18 12 15 21 9 3 6 12 2 12"/></svg>`,
+            briefcase: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><rect x="2" y="7" width="20" height="14" rx="2"/><path stroke-linecap="round" stroke-linejoin="round" d="M16 7V5a2 2 0 00-2-2h-4a2 2 0 00-2 2v2"/></svg>`,
+            lock: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><rect x="3" y="11" width="18" height="11" rx="2"/><path stroke-linecap="round" stroke-linejoin="round" d="M7 11V7a5 5 0 0110 0v4"/></svg>`,
+            trending: `<svg xmlns="http://www.w3.org/2000/svg" width="24" height="24" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="1.5"><polyline points="23 6 13.5 15.5 8.5 10.5 1 18"/><polyline points="17 6 23 6 23 12"/></svg>`,
+            check: `<svg xmlns="http://www.w3.org/2000/svg" width="16" height="16" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2.5"><path stroke-linecap="round" stroke-linejoin="round" d="M5 13l4 4L19 7"/></svg>`,
+            alert: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M12 9v4m0 4h.01M10.29 3.86L1.82 18a2 2 0 001.71 3h16.94a2 2 0 001.71-3L13.71 3.86a2 2 0 00-3.42 0z"/></svg>`,
+            info: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><circle cx="12" cy="12" r="10"/><line x1="12" y1="16" x2="12" y2="12"/><line x1="12" y1="8" x2="12.01" y2="8"/></svg>`,
+            upload: `<svg xmlns="http://www.w3.org/2000/svg" width="14" height="14" fill="none" viewBox="0 0 24 24" stroke="currentColor" stroke-width="2"><path stroke-linecap="round" stroke-linejoin="round" d="M21 15v4a2 2 0 01-2 2H5a2 2 0 01-2-2v-4M17 8l-5-5-5 5M12 3v12"/></svg>`,
+        };
+
+        // CORE DIMENSIONS (V2 Data Structure)
+        const CORE_DIMENSIONS = [
+            { id: 1, title: 'Corporate structure', icon: ICONS.building, desc: 'Foundational legal and financial stability.', rationale: 'Is the entity robust enough to survive the sales cycle?', items: [
+                // REQUIRED (Weight 0.14)
+                { id: 'inc_status', type: 'tiles', question: 'Incorporation Status', required: true, weight: 0.14, doc: 'Cert of Incorporation', docId: 'doc_inc', why: 'Ensures the business is a distinct legal entity to limit corporate liability.', options: [{l: 'Ltd', v: 1}, {l: 'Inc', v: 1}, {l: 'GmbH', v: 1}, {l: 'SAS', v: 1}, {l: 'PLC', v: 1}] },
+                { id: 'kyc', type: 'text', question: 'Beneficial Ownership (KYC)', required: true, weight: 0.14, doc: 'KYC Disclosure', docId: 'doc_kyc', why: 'Mandatory verification of control to meet 2026 anti-money laundering standards.', sub: ['List of Owners >10%'] },
+                { id: 'id_verify', type: 'checkbox', question: 'Verified Identity for Directors & PSCs', required: true, weight: 0.14, doc: 'ID Verification Proof', docId: 'doc_id', why: '2026 UK legal mandate requiring ID verification for all directors and significant owners.' },
+                { id: 'ip_assign', type: 'checkbox', question: 'IP Assignment (PIIAA)', required: true, weight: 0.14, doc: 'IP Assignment Agmt', docId: 'doc_piiaa', why: 'Verified that all code and designs built by founders/contractors are legally owned by the company.' },
+                { id: 'office', type: 'tiles', question: 'Registered Office', required: true, weight: 0.14, doc: 'Proof of Address', docId: 'doc_office', why: 'Proof of a physical business presence to satisfy "real business" verification protocols.', options: [{l: 'Real Office', v: 1}, {l: 'PO Box', v: 0}] },
+                { id: 'pi_limit', type: 'tiles', question: 'Professional indemnity limit', required: true, weight: 0.14, doc: 'Insurance Schedule', docId: 'doc_pi', why: 'Absolute contractual floor required to satisfy Enterprise MSA liability caps.', options: [{l: 'None', v: 0}, {l: "<£1m", v: 0.5}, {l: '£1m+', v: 1}] },
+                { id: 'coi_policy', type: 'checkbox', question: 'Conflict of Interest Policy', required: true, weight: 0.14, doc: 'COI Policy', docId: 'doc_coi', why: 'Required to ensure no undisclosed relationships with client competitors or stakeholders.' },
+
+                // OPTIONAL (Weight 0.53-0.62)
+                { id: 'ai_owner', type: 'text', question: 'AI Accountability Owner', required: false, weight: 0.53, doc: 'AI Charter', docId: 'doc_ai_owner', why: 'Advanced 2026 governance; a specific role must be accountable for AI compliance and risk.', sub: ['Named Individual/Role'] },
+                { id: 'board', type: 'text', question: 'Board of Directors', required: false, weight: 0.53, doc: 'Board List', docId: 'doc_board', why: 'Independent oversight signals organizational stability and de-risks key-person dependency.', sub: ['Named Board'] },
+                { id: 'ip_indem', type: 'checkbox', question: 'Indemnity for 3rd-Party IP Claims', required: false, weight: 0.62, doc: 'MSA Template', docId: 'doc_ip_indem', why: 'The ultimate legal differentiator; a promise that your software does not infringe on existing patents.' },
+                { id: 'vesting', type: 'checkbox', question: 'Founder/Key-Person Vesting', required: false, weight: 0.53, doc: 'Shareholders Agmt', docId: 'doc_vesting', why: 'Protects the corporate client from project abandonment if a founder departs early.' },
+                { id: 'authority', type: 'checkbox', question: 'Authority Matrix', required: false, weight: 0.53, doc: 'RACI Matrix', docId: 'doc_auth', why: 'Documented rules on contract signing and spend to prevent project integration stalling.' },
+                { id: 'ind_directors', type: 'tiles', question: 'Independent Director Rep.', required: false, weight: 0.53, doc: 'Director CVs', docId: 'doc_ind_dir', why: 'Independent directors provide unbiased oversight and increase "professionalism" scores.', options: [{l: '0', v: 0}, {l: '1', v: 0.5}, {l: '2+', v: 1}] },
+                { id: 'committees', type: 'checkbox', question: 'Board Committee Structure', required: false, weight: 0.53, doc: 'Committee Charters', docId: 'doc_comm', why: 'Mirroring corporate setups (Audit/Risk) demonstrates high governance maturity.' },
+                { id: 'cap_clarity', type: 'tiles', question: 'Cap Table Clarity', required: false, weight: 0.53, doc: 'Cap Table Summary', docId: 'doc_cap_clear', why: 'Messy ownership structures are major red flags that often stall procurement in the final hour.', options: [{l: 'Clear', v: 1}, {l: 'Disputed', v: 0}] },
+                { id: 'history', type: 'tiles', question: 'Operating History', required: false, weight: 0.53, doc: 'Registration Proof', docId: 'doc_hist', why: 'Corporates look for a 2+ year track record to avoid "shell company" risk.', options: [{l: '0-1 Yr', v: 0}, {l: '1-2 Yrs', v: 0.3}, {l: '2-5 Yrs', v: 0.7}, {l: '5+ Yrs', v: 1.0}] },
+                { id: 'trading', type: 'tiles', question: 'How long trading?', required: false, weight: 0.53, doc: 'Financial Proof', docId: 'doc_trade_dur', why: 'Specifically assesses active trading time to mitigate insolvency and "fly-by-night" risk.', options: [{l: '< 1 yr', v: 0}, {l: '1-2 Yrs', v: 0.5}, {l: '2+ Yrs', v: 1}] },
+                { id: 'parent', type: 'tiles', question: 'Parent-Subsidiary Relationship', required: false, weight: 0.53, doc: 'Structure Chart', docId: 'doc_parent', why: 'Ensures clear understanding of where the contract lies and where the IP is technically held.', options: [{l: 'Single', v: 1}, {l: 'Group', v: 1}] },
+                { id: 'subsidiary', type: 'tiles', question: 'Subsidiary/Holding Setup', required: false, weight: 0.53, doc: 'Group Map', docId: 'doc_sub', why: 'Identifies if IP is ring-fenced, affecting the client\'s long-term licensing security.', options: [{l: 'Single', v: 1}, {l: 'Holding-OpCo', v: 1}] },
+                { id: 'cross_border', type: 'checkbox', question: 'Cross-Border Compliance', required: false, weight: 0.53, doc: 'Legal Structure', docId: 'doc_cross', why: 'Ensures non-UK/US entities are properly declared for tax and international regulatory risk.' },
+                { id: 'emp_ratio', type: 'text', question: 'Employee vs. Contractor Ratio', required: false, weight: 0.53, doc: 'HR Summary', docId: 'doc_emp_ratio', why: 'Identifies misclassified contractors to avoid the client\'s joint-employer tax liabilities.', sub: ['Ratio / List'] },
+                { id: 'chain_title', type: 'checkbox', question: 'Chain of Title (IP) Warranty', required: false, weight: 0.53, doc: 'PIIAA Audit', docId: 'doc_chain', why: 'A formal guarantee that the chain of ownership for all code is unbroken from inception.' },
+                { id: 'filing_agent', type: 'checkbox', question: 'Authorized Filing Agent Used?', required: false, weight: 0.53, doc: 'Agent Verification', docId: 'doc_agent', why: 'In 2026, using an authorized agent for filings is a proxy for high-trust administrative processes.' },
+                { id: 'cap_clean', type: 'checkbox', question: 'Cap table clean & assigned?', required: false, weight: 0.53, doc: 'Cap Table', docId: 'doc_cap_clean', why: 'Simplified verification that all equity promises are documented to prevent future litigation.' }
+            ]},
+            { id: 2, title: 'Security & compliance', icon: ICONS.shield, desc: 'Data protection and infiltration risk.', rationale: 'Can we trust you with our customer data?', items: [
+                // REQUIRED (Weight 0.05)
+                { id: 'privacy', type: 'checkbox', question: 'Privacy policy?', required: true, weight: 0.05, doc: 'Privacy Policy', docId: 'doc_privacy', why: 'Absolute legal mandate under GDPR/UK GDPR; required for any entity processing personal data.' },
+                { id: 'encrypt', type: 'checkbox', question: 'Data encrypted rest & transit?', required: true, weight: 0.05, doc: 'Arch Diagram', docId: 'doc_encrypt', why: 'Fundamental security control; non-negotiable for enterprise data protection and risk mitigation.' },
+                { id: 'dr_test', type: 'checkbox', question: 'Disaster recovery tested?', required: true, weight: 0.05, doc: 'DR Plan', docId: 'doc_dr_test', why: 'Base-level reliability requirement to ensure business continuity and minimize data loss during outages.' },
+                { id: 'dpa', type: 'checkbox', question: 'Data Processing Agmt (DPA)?', required: true, weight: 0.05, doc: 'DPA Template', docId: 'doc_dpa', why: 'Legal necessity defining sub-processors and data handling; must be ready to sign during onboarding.' },
+                { id: 'tax_good', type: 'checkbox', question: 'Tax Good Standing Certificate?', required: true, weight: 0.05, doc: 'Tax Status Letter', docId: 'doc_tax_good', why: 'Proves the entity is current on tax obligations to avoid financial liens or partnership invalidation.' },
+                { id: 'rtw', type: 'tiles', question: 'Right to Work Verification', required: true, weight: 0.05, doc: 'Verification Policy', docId: 'doc_rtw', why: 'Mandatory legal requirement to prevent illegal employment risks and satisfy labor law audits.', options: [{l: '<100%', v: 0}, {l: '100%', v: 1}] },
+                { id: 'abc', type: 'checkbox', question: 'Anti-Bribery & Corruption (ABC)?', required: true, weight: 0.05, doc: 'ABC Policy', docId: 'doc_abc', why: 'Non-negotiable requirement under the UK Bribery Act and FCPA for corporate vendor onboarding.' },
+                { id: 'ip_indem', type: 'checkbox', question: 'Indemnity for 3rd-Party IP?', required: true, weight: 0.05, doc: 'MSA Template', docId: 'doc_ip_indem_sec', why: 'Contractual floor: a guarantee that your software doesn\'t infringe on patents, protecting the client.' },
+                
+                // NEW REQUIRED ITEMS V2
+                { id: 'data_residency', type: 'text', question: 'Tech Stack Location (Data Residency)', required: true, weight: 0.05, doc: 'Architecture Diagram', docId: 'doc_data_res', why: 'Mandatory to ensure compliance with GDPR/UK GDPR and jurisdictional sovereignty laws.', sub: ['List Regions (UK, EU, US...)'] },
+                { id: 'cloud_provider', type: 'text', question: 'Cloud Infrastructure Provider', required: true, weight: 0.05, doc: 'Service Summary', docId: 'doc_cloud', why: 'Identifies systemic provider risk and determines if automated ESG reporting (Scope 3) is possible via API.', sub: ['AWS, Azure, GCP, etc.'] },
+
+                // OPTIONAL (Weights 0.47)
+                { id: 'isms', type: 'tiles', question: 'ISMS cert (SOC2 / ISO)', required: false, weight: 0.47, doc: 'Audit Report', docId: 'doc_isms', why: 'The "Gold Standard" differentiator; signals a mature, independently verified management system.', options: [{l: 'None', v: 0}, {l: 'Cyber Essentials', v: 0.5}, {l: 'SOC2/ISO', v: 1}] },
+                { id: 'pentest', type: 'tiles', question: 'Penetration testing', required: false, weight: 0.47, doc: 'Test Summary', docId: 'doc_pentest', why: 'Proactive technical verification; proves your defenses work against current real-world exploits.', options: [{l: '>12 mo', v: 0}, {l: '<12 mo', v: 1}] },
+                { id: 'scim', type: 'checkbox', question: 'Automated Deprovisioning (SCIM)?', required: false, weight: 0.47, doc: 'SCIM Docs', docId: 'doc_scim', why: 'High-value IT requirement; prevents "orphan accounts" when client employees depart the firm.' },
+                { id: 'saml', type: 'checkbox', question: 'SAML 2.0 / OIDC Support?', required: false, weight: 0.47, doc: 'Integration Guide', docId: 'doc_saml', why: 'Primary maturity indicator for identity security; allows clients to manage access via their own IDP.' },
+                { id: 'mfa', type: 'checkbox', question: 'Adaptive MFA Implementation?', required: false, weight: 0.47, doc: 'Auth Policy', docId: 'doc_mfa', why: 'Advanced security: applies MFA based on risk signals (e.g., location), balancing security and UX.' },
+                { id: 'logs', type: 'checkbox', question: 'Immutable Audit Logs?', required: false, weight: 0.47, doc: 'Log Config', docId: 'doc_logs', why: 'Forensic readiness: required by 2026 standards to ensure logs are tamper-proof and retained for 1yr+.' },
+                { id: 'pii_redact', type: 'checkbox', question: 'PII Redaction in Logs?', required: false, weight: 0.47, doc: 'Sample Log', docId: 'doc_pii_redact', why: 'Privacy-first engineering: ensures sensitive user data isn\'t accidentally stored in plaintext system logs.' },
+                { id: 'network_seg', type: 'checkbox', question: 'Network Segregation?', required: false, weight: 0.47, doc: 'Architecture Map', docId: 'doc_network_seg', why: 'Prevents "lateral movement"; proves production data is isolated from development environments.' },
+                { id: 'patch', type: 'tiles', question: 'Vulnerability Patch Window', required: false, weight: 0.47, doc: 'Patch Policy', docId: 'doc_patch', why: 'Differentiator: aligns with Cyber Essentials 2026 mandate for 14-day high-risk patching.', options: [{l: '>30 Days', v: 0}, {l: '<30 Days', v: 0.5}, {l: '<14 Days', v: 1}] },
+                { id: 'sbom', type: 'checkbox', question: 'Software Bill of Materials (SBOM)?', required: false, weight: 0.47, doc: 'SBOM Export', docId: 'doc_sbom', why: 'Supply chain transparency: tracks open-source libraries to manage cascading security vulnerabilities.' },
+                { id: 'incident_resp', type: 'tiles', question: 'Incident Response Testing', required: false, weight: 0.47, doc: 'Test Report', docId: 'doc_incident_resp', why: 'Verification that your team has "fire-drilled" breach notifications and system recovery plans.', options: [{l: 'None', v: 0}, {l: 'Annually', v: 0.5}, {l: 'Quarterly', v: 1}] },
+                { id: 'nis2', type: 'tiles', question: 'NIS2 / DORA Scope Check', required: false, weight: 0.47, doc: 'Compliance Rationale', docId: 'doc_nis2', why: 'Determines if the startup is subject to 2026 EU mandates for critical infrastructure or finance.', options: [{l: 'Out of Scope', v: 1}, {l: 'In Scope', v: 0.5}] },
+                { id: 'emp_class', type: 'tiles', question: 'Employee Classification Audit (Ratio)', required: false, weight: 0.47, doc: 'HR Census', docId: 'doc_emp_class', why: 'Maturity check: ensures no misclassified contractors to avoid joint-employer tax liabilities.', options: [{l: 'High Risk', v: 0}, {l: 'Med', v: 0.5}, {l: 'Low Risk', v: 1}] },
+                { id: 'anti_harass', type: 'tiles', question: 'Anti-Harassment Training (% Completion)', required: false, weight: 0.47, doc: 'Training Log', docId: 'doc_anti_harass', why: 'Social compliance: proves a professional culture and meets 2026 corporate code-of-conduct norms.', options: [{l: '<80%', v: 0}, {l: '80-99%', v: 0.5}, {l: '100%', v: 1}] },
+                { id: 'whistle', type: 'checkbox', question: 'Whistleblower Mechanism?', required: false, weight: 0.47, doc: 'Grievance Policy', docId: 'doc_whistle', why: 'Governance differentiator: provides a safe channel for reporting malpractices without retaliation.' },
+                { id: 'export', type: 'tiles', question: 'Export Control Review', required: false, weight: 0.47, doc: 'Compliance Memo', docId: 'doc_export', why: 'Vital for dual-use tech: identifies if the product is subject to ITAR, EAR, or specific AI restrictions.', options: [{l: 'In Scope', v: 0.5}, {l: 'Out of Scope', v: 1}] },
+                { id: 'transfer', type: 'tiles', question: 'Transfer Pricing Policy', required: false, weight: 0.47, doc: 'OECD Report', docId: 'doc_transfer', why: 'High-maturity tax check for global teams to ensure margins align with OECD 2026 guidelines.', options: [{l: 'No', v: 0}, {l: 'N/A', v: 1}, {l: 'Yes', v: 1}] },
+                { id: 'sso_basic', type: 'checkbox', question: 'SSO and SCIM support (Basic)?', required: false, weight: 0.47, doc: 'Tech Spec', docId: 'doc_sso_basic', why: 'Verification that user management friction has been addressed for basic IT onboarding.' }
+            ]},
+            // AI GOVERNANCE (Updated Weights & Requirements)
+            { id: 3, title: 'AI governance', icon: ICONS.zap, desc: 'Managing "black box" liability.', rationale: 'Can you explain the AI decisions?', items: [
+                { id: 'aiact', type: 'tiles', question: 'AI Act compliance tier?', required: true, weight: 0.3, doc: 'Compliance roadmap', docId: 'doc_aiact', why: 'Mandatory legal classification to determine regulatory obligations for the 2026 deadline.', options: [{l: 'Unregulated', v: 1}, {l: 'Class I', v: 0.8}, {l: 'Class II', v: 0.5}, {l: 'Prohibited', v: 0}] },
+                { id: 'airisk', type: 'tiles', question: 'AI Act Risk Classification?', required: true, weight: 0.3, doc: 'Compliance Roadmap', docId: 'doc_airisk', why: 'Secondary verification of the specific risk category assigned to the system.', options: [{l: 'Unregulated', v: 1}, {l: 'Limited', v: 0.8}, {l: 'High-Risk', v: 0.5}, {l: 'Prohibited', v: 0}] },
+                { id: 'prohibit', type: 'checkbox', question: 'Prohibited Practice Check?', required: true, weight: 0.3, doc: 'Article 5 Attestation', docId: 'doc_prohibit', why: 'Verified absence of social scoring or manipulative AI is a non-negotiable floor for corporate safety.' },
+                { id: 'disclosure', type: 'checkbox', question: 'AI System Disclosure process?', required: true, weight: 0.3, doc: 'UI Screenshots', docId: 'doc_disclosure', why: 'Mandatory transparency requirement; synthetic content and bots must be clearly labeled.' },
+                { id: 'training', type: 'checkbox', question: 'Hold training data?', required: false, weight: 0.88, doc: 'Data audit log', docId: 'doc_train', why: 'Demonstrates control over the supply chain; essential for deep technical due diligence.' },
+                { id: 'provenance', type: 'checkbox', question: 'Training Data Provenance?', required: false, weight: 0.88, doc: 'Data audit log', docId: 'doc_prov', why: 'Proves data was legally sourced, protecting the corporate from copyright infringement claims.' },
+                { id: 'quality', type: 'tiles', question: 'Data Quality Assessment?', required: false, weight: 0.88, doc: 'Quality Report', docId: 'doc_qual', why: 'Verified evidence that data is representative and error-free to prevent model drift.', options: [{l: 'High', v: 1}, {l: 'Medium', v: 0.5}, {l: 'Low', v: 0}] },
+                { id: 'bias', type: 'checkbox', question: 'Bias Testing Protocols?', required: false, weight: 0.88, doc: 'Bias Audit Log', docId: 'doc_bias', why: 'Proactive detection of algorithmic discrimination; highly valued in HR and Finance sectors.' },
+                { id: 'model', type: 'checkbox', question: 'Model Cards Documented?', required: false, weight: 0.88, doc: 'Tech Documentation', docId: 'doc_model_card', why: 'Moves beyond "black box" claims by detailing architecture, training, and known limits.' },
+                { id: 'human', type: 'tiles', question: 'Human Oversight Model?', required: false, weight: 0.88, doc: 'Oversight Policy', docId: 'doc_human', why: 'Defines the intervention strategy (e.g., Human-in-the-loop) to mitigate autonomous errors.', options: [{l: 'HITL', v: 1}, {l: 'HOTL', v: 1}, {l: 'HIC', v: 1}] },
+                { id: 'stop', type: 'checkbox', question: '"Stop Button" Protocol?', required: false, weight: 0.88, doc: 'Incident Plan', docId: 'doc_stop', why: 'A critical safety mechanism to immediately halt operations during an anomaly or failure.' },
+                { id: 'incident', type: 'checkbox', question: 'AI Incident Response plan?', required: false, weight: 0.88, doc: 'Incident Log Template', docId: 'doc_incident', why: 'Documents the workflow for reporting serious incidents to authorities or clients within 24 hours.' },
+                { id: 'ip', type: 'checkbox', question: 'IP Indemnity Offered?', required: false, weight: 0.88, doc: 'Legal Terms', docId: 'doc_legal', why: 'The primary legal differentiator; shifts the risk of copyright/patent lawsuits away from the client.' },
+                { id: 'explain', type: 'tiles', question: 'Explainability Level?', required: false, weight: 0.88, doc: 'Explainability Doc', docId: 'doc_explain', why: 'Provides the logical justification for automated outputs, required by corporate legal teams.', options: [{l: 'Global', v: 1}, {l: 'Local', v: 1}, {l: 'None', v: 0}] }
+            ]},
+            { id: 4, title: 'Commercial readiness', icon: ICONS.users, desc: 'Navigating enterprise procurement.', rationale: 'Can you sign our MSA?', items: [
+                { id: 'arr', type: 'tiles', question: 'Annual Recurring Revenue (ARR)', required: true, weight: 0.3, doc: 'Management Accounts', docId: 'doc_arr', why: 'Baseline financial evidence to ensure the startup is a viable ongoing concern for the contract duration.', options: [{l: '<£100k', v: 0}, {l: '£100k-£1M', v: 0.5}, {l: '£1M+', v: 1}] },
+                { id: 'runway_comm', type: 'tiles', question: 'Runway (Months)', required: true, weight: 0.3, doc: 'Financial Statement', docId: 'doc_runway_comm', why: 'Corporates need assurance the startup will exist for the duration of the pilot and rollout (18+ preferred).', options: [{l: '<6', v: 0}, {l: '6-12', v: 0.5}, {l: '12-18', v: 0.8}, {l: '18+', v: 1}] },
+                { id: 'liability', type: 'tiles', question: 'Contractual liability cap', required: true, weight: 0.3, doc: 'Insurance schedule', docId: 'doc_liability', why: 'Matches startup risk profile with corporate indemnity requirements to prevent legal roadblocks.', options: [{l: '<£1m', v: 0}, {l: '£1m-£5m', v: 0.5}, {l: '£5m+', v: 1}] },
+                { id: 'ent_terms', type: 'checkbox', question: 'Standard Enterprise Terms?', required: true, weight: 0.3, doc: 'MSA/SaaS Template', docId: 'doc_ent_terms', why: 'Startups must have a "ready-to-sign" contract framework (MSA/SaaS terms) to prevent procurement stalling.' },
+                { id: 'pricing_model', type: 'tiles', question: 'Pricing Model Type', required: false, weight: 0.88, doc: 'Pricing Policy', docId: 'doc_pricing_model', why: 'Clarifies fit with procurement budgets (e.g., Seat-based vs. Consumption vs. Flat Fee).', options: [{l: 'Per Seat', v: 1}, {l: 'Usage', v: 1}, {l: 'Flat Fee', v: 1}] },
+                { id: 'sales_cycle', type: 'tiles', question: 'Avg. Sales Cycle Duration', required: false, weight: 0.88, doc: 'CRM Report', docId: 'doc_sales_cycle', why: 'Helps corporate champions estimate time-to-value.', options: [{l: '<3 mo', v: 1}, {l: '3-6 mo', v: 0.8}, {l: '6+ mo', v: 0.5}] },
+                { id: 'refs', type: 'tiles', question: 'Enterprise references', required: false, weight: 0.88, doc: 'Reference List', docId: 'doc_refs', why: 'The primary currency of trust; verified social proof from similar large organizations.', options: [{l: 'None', v: 0}, {l: '1', v: 0.5}, {l: '2', v: 0.8}, {l: '3+', v: 1}] },
+                { id: 'cust_count', type: 'tiles', question: 'Enterprise Customer Count', required: false, weight: 0.88, doc: 'Logo Sheet', docId: 'doc_cust_count', why: 'Proven ability to navigate large organizational complexity; 3+ logos is the enterprise benchmark.', options: [{l: '0', v: 0}, {l: '1', v: 0.5}, {l: '2', v: 0.8}, {l: '3+', v: 1}] },
+                { id: 'pmf', type: 'checkbox', question: 'Product-Market Fit Evidence?', required: false, weight: 0.88, doc: 'Metrics Report', docId: 'doc_pmf', why: 'Hard metrics demonstrating that existing enterprise users find value and remain active (NPS/Retention).' },
+                { id: 'pilot', type: 'tiles', question: 'Pilot Track Record (# Completed)', required: false, weight: 0.88, doc: 'Pilot Outcomes', docId: 'doc_pilot', why: 'Evidence of successful transitions from a "pilot" state to a "full production" contract.', options: [{l: '0', v: 0}, {l: '1-2', v: 0.5}, {l: '3+', v: 1}] },
+                { id: 'rate_card', type: 'checkbox', question: 'Standard rate card?', required: false, weight: 0.88, doc: 'Pricing Sheet', docId: 'doc_rate_card', why: 'Demonstrates pricing maturity and transparency; prevents individual deal negotiation delays.' },
+                { id: 'gtm', type: 'tiles', question: 'Go-to-Market (GTM) Plan', required: false, weight: 0.88, doc: 'GTM Strategy', docId: 'doc_gtm', why: 'Documents how the product is sold and supported, identifying potential delivery bottlenecks.', options: [{l: 'Direct', v: 1}, {l: 'Channel', v: 1}, {l: 'Both', v: 1}] },
+                { id: 'unit_econ', type: 'tiles', question: 'Unit Economics / Lifecycle', required: false, weight: 0.88, doc: 'Rate Card', docId: 'doc_unit_econ', why: 'Ensures pricing reflects long-term maintenance and operating costs (not just acquisition).', options: [{l: 'SaaS', v: 1}, {l: 'License', v: 1}, {l: 'Utility', v: 1}] },
+                { id: 'cust_success', type: 'checkbox', question: 'Customer Success Process?', required: false, weight: 0.88, doc: 'Onboarding Flow', docId: 'doc_cust_success', why: 'Verification of a formal "LBGUPS" process (Learn, Buy, Get, Use, Pay, Support).' },
+                { id: 'gva', type: 'tiles', question: 'What is your GVA?', required: false, weight: 0.88, doc: 'GVA Report', docId: 'doc_gva', why: 'Proof of Gross Value Added (GVA) to help corporate sponsors justify the "mismatch risk."', options: [{l: '<£25k', v: 0}, {l: '£25-100k', v: 0.5}, {l: '>£100k', v: 1}] },
+                { id: 'decision_map', type: 'checkbox', question: 'Decision unit mapped?', required: false, weight: 0.88, doc: 'Account Plan', docId: 'doc_decision_map', why: 'Signals sales maturity; verifies the startup understands corporate stakeholder mapping.' }
+            ]},
+            { id: 5, title: 'Operations', icon: ICONS.activity, desc: 'Scalability of support and processes.', rationale: 'Will the founder burn out?', items: [
+                // REQUIRED (Weight 0.05)
+                { id: 'prod_stage', type: 'tiles', question: 'Product stage', required: true, weight: 0.05, doc: 'Product URL', docId: 'doc_prod_stage', why: 'Corporates generally require "MVP" or "Scaling" status; "Beta" stages indicate high stability risk.', options: [{l: 'Pre-Alpha', v: 0}, {l: 'Alpha', v: 0.2}, {l: 'Beta', v: 0.5}, {l: 'Live (MVP)', v: 0.8}, {l: 'Scaling', v: 1}] },
+                { id: 'sla_comm', type: 'tiles', question: 'SLA commitment', required: true, weight: 0.05, doc: 'SLA template', docId: 'doc_sla_comm', why: 'Reliability is the primary currency of trust; must align with corporate uptime expectations.', options: [{l: 'Best effort', v: 0}, {l: '99.0%', v: 0.6}, {l: '99.9%', v: 0.8}, {l: '99.99%', v: 1}] },
+                { id: 'integration', type: 'tiles', question: 'Integration Capability', required: true, weight: 0.05, doc: 'API Documentation', docId: 'doc_integration', why: 'SSO and automated user management (SCIM) are floor requirements for IT security.', options: [{l: 'None', v: 0}, {l: 'API', v: 0.5}, {l: 'SAML/SSO', v: 1}] },
+                { id: 'bcp_plan', type: 'checkbox', question: 'Business Continuity Plan (BCP)?', required: true, weight: 0.05, doc: 'Tested BCP Document', docId: 'doc_bcp_plan', why: 'Proves the startup can maintain operations during severe but plausible disruptions.' },
+                { id: 'dr_backups', type: 'tiles', question: 'Disaster Recovery (DR) Backups', required: true, weight: 0.05, doc: 'DR Testing Log', docId: 'doc_dr_backups', why: 'Ensures data integrity; mandatory for any startup handling corporate data.', options: [{l: 'Manual', v: 0}, {l: 'Cloud-native', v: 0.8}, {l: 'Off-site', v: 1}] },
+                
+                // OPTIONAL (Weight 0.61)
+                { id: 'uptime_mon', type: 'checkbox', question: 'Uptime Monitoring (Public Status Page)?', required: false, weight: 0.61, doc: 'Status URL', docId: 'doc_uptime', why: 'Transparency build trusts; allows clients to verify reliability claims independently.' },
+                { id: 'support_tiers', type: 'tiles', question: 'Support Tiering', required: false, weight: 0.61, doc: 'Service Catalog', docId: 'doc_tiers', why: 'Ensures appropriate response times (Gold/Silver/Bronze) matching client criticality.', options: [{l: 'Single', v: 0.5}, {l: 'Tiered', v: 1}] },
+                { id: 'team_size', type: 'tiles', question: 'Team Size (FTEs)', required: false, weight: 0.61, doc: 'Org Chart', docId: 'doc_team_size', why: '10+ FTEs is the general benchmark to ensure a "back office" supports scale.', options: [{l: '1-5', v: 0}, {l: '6-15', v: 0.5}, {l: '16-50', v: 0.8}, {l: '51+', v: 1}] },
+                { id: 'back_office', type: 'checkbox', question: 'Back Office Capability (HR/Legal/Finance)?', required: false, weight: 0.61, doc: 'Org Chart', docId: 'doc_back_office', why: 'Verification that internal functions can support complex billing and hiring requirements.' },
+                { id: 'roi_track', type: 'checkbox', question: 'ROI Tracking & Analytics?', required: false, weight: 0.61, doc: 'Sample Dashboard', docId: 'doc_roi', why: 'Enables client stakeholders to justify spend with hard data on productivity/financial gains.' },
+                { id: 'change_mgmt', type: 'checkbox', question: 'Change Management Policy?', required: false, weight: 0.61, doc: 'Change/Release Policy', docId: 'doc_change', why: 'Prevents "cowboy coding"; ensures updates are versioned, tested, and communicated.' },
+                { id: 'release_verify', type: 'checkbox', question: 'Release Verification Mechanism?', required: false, weight: 0.61, doc: 'QA Workflow', docId: 'doc_release', why: 'Mechanism to ensure code changes are approved by someone other than the author.' },
+                { id: 'dependency', type: 'checkbox', question: 'Dependency Mapping?', required: false, weight: 0.61, doc: 'Architecture Diagram', docId: 'doc_dependency', why: 'Identifies external services (APIs) that could cause a "blast radius" failure.' },
+                { id: 'throttling', type: 'checkbox', question: 'System Throttling/Limits?', required: false, weight: 0.61, doc: 'API Documentation', docId: 'doc_throttle', why: 'Protects the workload from customer-driven overload and ensures fair resource allocation.' },
+                { id: 'op_resilience', type: 'tiles', question: 'Operational resilience (RTO/RPO)', required: false, weight: 0.61, doc: 'BCP / DR Policy', docId: 'doc_op_res', why: 'Strategic depth: defines the "sustainability risk" of vendor failure during critical integration.', options: [{l: 'Next Day+', v: 0}, {l: 'Same Day', v: 0.5}, {l: 'Immediate', v: 1}] },
+                { id: 'rto', type: 'tiles', question: 'Recovery Time Objective (RTO)', required: false, weight: 0.61, doc: 'RTO/RPO Strategy', docId: 'doc_rto', why: 'Defines the maximum allowable downtime before an unacceptable impact occurs to the client.', options: [{l: '24h+', v: 0}, {l: '4-24h', v: 0.5}, {l: '1-4h', v: 0.8}, {l: '<1h', v: 1}] },
+                { id: 'rpo', type: 'tiles', question: 'Recovery Point Objective (RPO Hours)', required: false, weight: 0.61, doc: 'RTO/RPO Strategy', docId: 'doc_rpo', why: 'Defines the maximum allowable data loss (e.g., time since last backup) during an outage.', options: [{l: '24h+', v: 0}, {l: '4-24h', v: 0.5}, {l: '1-4h', v: 0.8}, {l: '<1h', v: 1}] },
+                { id: 'account_mgmt', type: 'checkbox', question: 'Named Account Management?', required: false, weight: 0.61, doc: 'Support Policy', docId: 'doc_acct_mgmt', why: 'Corporates expect a dedicated human point of contact for escalations, strategy, and continuous success.' },
+                { id: 'ded_support', type: 'checkbox', question: 'Dedicated support system?', required: false, weight: 0.61, doc: 'System screenshot', docId: 'doc_ded_supp', why: 'Verification that issues are tracked via a professional ticketing system rather than ad-hoc emails.' },
+                { id: 'key_person', type: 'checkbox', question: 'Key-Person Risk Mitigation?', required: false, weight: 0.61, doc: 'Succession Plan', docId: 'doc_key_person', why: 'Ensures project and service continuity is not entirely dependent on a single founder or developer.' },
+                { id: 'corp_calendar', type: 'checkbox', question: 'Calendar of Corporate Events?', required: false, weight: 0.61, doc: 'Board Calendar', docId: 'doc_calendar', why: 'Proof of regular board and management meetings to discuss risks, performance, and strategic alignment.' },
+                { id: 'local_mult', type: 'checkbox', question: 'Local multiplier effect tracked?', required: false, weight: 0.6, doc: 'Economic statement', docId: 'doc_local_mult', why: 'Demonstrates the economic benefit of spending with local SMEs; used to satisfy social value procurement targets.' }
+            ]}
+        ];
+
+        const REGISTRY_INFO = {
+            uk:       { label: 'Companies House number (e.g. 12345678)', doc: 'Certificate of Incorporation' },
+            fr:       { label: 'SIREN / SIRET number',                   doc: 'Kbis Extract' },
+            de:       { label: 'Handelsregisternummer (HRB/HRA)',         doc: 'Handelsregisterauszug' },
+            gr:       { label: 'GEMI registration number',               doc: 'Certificate of Registration' },
+            is:       { label: 'RSK / company registration number',       doc: 'Certificate of Incorporation' },
+            ie:       { label: 'CRO company number',                     doc: 'Certificate of Incorporation' },
+            it:       { label: 'Codice fiscale / REA number',            doc: 'Visura Camerale' },
+            lv:       { label: 'Uzņēmumu reģistra number',              doc: 'Certificate of Registration' },
+            lu:       { label: 'RCS Luxembourg number',                  doc: 'Extrait RCS' },
+            nl:       { label: 'KvK number',                             doc: 'KvK Uittreksel' },
+            se:       { label: 'Organisationsnummer',                    doc: 'Registreringsbevis' },
+            es:       { label: 'CIF / NIF number',                       doc: 'Certificado de inscripción' },
+            eu_other: { label: 'National company registration number',   doc: 'Certificate of Incorporation' },
+        };
+
+        const COUNTRY_CURRENCIES = {
+            uk: 'GBP', us: 'USD', fr: 'EUR', de: 'EUR', gr: 'EUR', is: 'ISK', ie: 'EUR', it: 'EUR', 
+            lv: 'EUR', lu: 'EUR', nl: 'EUR', se: 'SEK', es: 'EUR', eu_other: 'EUR'
+        };
+
+        const SECTOR_MODULES = {
+            fin: { id: 'fin', title: 'Financial services', badgeName: 'FinTech verified', icon: '💰', items: [
+                // --- REQUIRED SECTION (Weight 0.1) ---
+                { id: 'fca_auth', type: 'checkbox', question: 'Is the entity FCA authorised?', required: true, weight: 0.1, doc: 'FCA Registration', docId: 'doc_fca', why: 'Absolute legal requirement to provide regulated financial services in the UK market.' },
+                { id: 'aml_kyc_framework', type: 'checkbox', question: 'AML / KYC Control Framework?', required: true, weight: 0.1, doc: 'AML Policy', docId: 'doc_aml', why: 'Mandatory for de-risking financial crime; proves robust customer and transaction monitoring.' },
+                { id: 'dora_ict_risk', type: 'checkbox', question: 'DORA ICT Risk Framework?', required: true, weight: 0.1, doc: 'ICT Risk Manual', docId: 'doc_dora_risk', why: 'Mandatory baseline for ICT service providers to prove they meet 2026 digital resilience standards.' },
+                { id: 'ibs_mapping', type: 'checkbox', question: 'Important Business Services (IBS)?', required: true, weight: 0.1, doc: 'IBS Map', docId: 'doc_ibs', why: 'Identification of services whose failure would cause intolerable harm to the firm or markets.', sub: ['Multi-select identified services'] },
+
+                // --- OPTIONAL / INDUSTRY SPECIFIC (Weight 1.6) ---
+                { id: 'impact_tolerances', type: 'checkbox', question: 'Tested Impact Tolerances?', required: false, weight: 1.6, doc: 'Testing Summary', docId: 'doc_tolerances', why: 'Proves the firm has tested its ability to remain within defined service limits during disruption.' },
+                { id: 'consumer_duty', type: 'checkbox', question: 'Consumer Duty Evidence?', required: false, weight: 1.6, doc: 'Outcome Report', docId: 'doc_consumer_duty', why: 'Maturity indicator; proves the solution delivers "good outcomes" for retail customers.' },
+                { id: 'tlpt_testing', type: 'tiles', question: 'Threat-Led Pen Testing (TLPT)?', required: false, weight: 1.6, doc: 'TLPT Report', docId: 'doc_tlpt', why: 'Advanced maturity; real-world simulation of cyber threats (TIBER-EU/DORA).', options: [{l: '< 12 mo', v: 1.0}, {l: '> 12 mo', v: 0.5}, {l: 'Never', v: 0}] },
+                { id: 'roi_dora', type: 'checkbox', question: 'Register of Information (RoI)?', required: false, weight: 1.6, doc: 'RoI Export', docId: 'doc_roi_export', why: 'Specific DORA requirement: a map of all ICT third-party dependencies and sub-contractors.' },
+                { id: 'op_res_assessment', type: 'checkbox', question: 'Op Resilience Self-Assessment?', required: false, weight: 1.6, doc: 'Self-Assessment', docId: 'doc_opres_self', why: 'The regulatory gold standard; a living document justifying the firm’s resilience strategy.' },
+                { id: 'pci_psd3_compliance', type: 'tiles', question: 'PCI-DSS / PSD3 Compliance?', required: false, weight: 1.6, doc: 'AOC Document', docId: 'doc_pci_aoc', why: 'Industry standard for payment processing security across the EEA and UK.', options: [{l: 'Level 1', v: 1.0}, {l: 'Level 2', v: 0.8}, {l: 'Level 3/4', v: 0.5}] }    
+            ]},
+            health: { id: 'health', title: 'Healthcare', badgeName: 'HealthTech verified', icon: '🏥', items: [
+                // --- REQUIRED SECTION (Weight 0.3) ---
+                { id: 'dpia_health', type: 'tiles', question: 'DPIA for this solution?', required: true, weight: 0.3, doc: 'DPIA Document', docId: 'doc_dpia_health', why: 'Mandatory under UK GDPR for any system processing sensitive health or biometric data.', options: [{l: 'Yes', v: 1.0}, {l: 'No', v: 0}] },
+                { id: 'caldicott_guardian', type: 'checkbox', question: 'Caldicott Guardian named?', required: true, weight: 0.3, doc: 'Appointment Letter', docId: 'doc_caldicott', why: 'NHS requirement: a senior person must be responsible for protecting patient confidentiality.' },
+                { id: 'cyber_essentials_basic', type: 'checkbox', question: 'Cyber Essentials (Basic)?', required: true, weight: 0.3, doc: 'CE Certificate', docId: 'doc_ce_health', why: 'Baseline technical requirement; proof of protection against common threats.' },
+                { id: 'nhs_ig_training', type: 'text', question: 'NHS IG Training Log?', required: true, weight: 0.3, doc: 'Training Report', docId: 'doc_ig_training', why: 'Non-negotiable floor: 95% of staff must complete annual Data Security Awareness training.', sub: ['Enter % Completion'] },
+
+                // --- OPTIONAL / INDUSTRY SPECIFIC (Weight 0.88) ---
+                { id: 'nhs_carbon_plan', type: 'checkbox', question: 'NHS Carbon Reduction Plan?', required: false, weight: 0.88, doc: 'Carbon Plan', docId: 'doc_nhs_carbon', why: '2026 mandate: firms must provide a Net Zero commitment to join major NHS frameworks.' },
+                { id: 'fhir_hl7_api', type: 'tiles', question: 'FHIR / HL7 API Support?', required: false, weight: 0.88, doc: 'API Spec', docId: 'doc_interop', why: 'Ensures the solution can read/write data into the patient’s central clinical record.', options: [{l: 'FHIR v4', v: 1.0}, {l: 'HL7 v2', v: 0.7}, {l: 'None', v: 0}] },
+                { id: 'ce_plus_health', type: 'checkbox', question: 'Cyber Essentials Plus?', required: false, weight: 0.88, doc: 'CE+ Certificate', docId: 'doc_ce_plus_health', why: 'High-trust tier; provides independent technical verification of security controls.' },
+                { id: 'ai_clinical_bias', type: 'checkbox', question: 'AI Clinical Bias Evidence?', required: false, weight: 0.88, doc: 'Bias Audit Log', docId: 'doc_clinical_bias', why: '2026 benchmark: proof that diagnostic algorithms do not exhibit racial or gender bias.' },
+                { id: 'csms_policy', type: 'checkbox', question: 'Safety Mgmt System (CSMS)?', required: false, weight: 0.88, doc: 'CSMS Policy', docId: 'doc_csms', why: 'Proves the firm has a formal Clinical Safety Management System to monitor risks.' },
+                { id: 'hazard_log', type: 'checkbox', question: 'Live Clinical Hazard Log?', required: false, weight: 0.88, doc: 'Hazard Log', docId: 'doc_hazard', why: 'Documentation of every known risk and mitigation strategy for the product.' },
+                { id: 'clinical_pi_insurance', type: 'tiles', question: 'Clinical Negligence PI?', required: false, weight: 0.88, doc: 'Insurance Sch.', docId: 'doc_clinical_ins', why: 'Covers liabilities arising from algorithmic errors or clinical advice.', options: [{l: '£1m+', v: 0.5}, {l: '£5m+', v: 1.0}, {l: 'None', v: 0}] },
+                { id: 'wcag_accessibility', type: 'checkbox', question: 'WCAG 2.1 AA Accessibility?', required: false, weight: 0.88, doc: 'Access Audit', docId: 'doc_wcag', why: 'Legal duty for patient-facing tech to be usable by those with diverse needs.' },
+                { id: 'cqc_status', type: 'checkbox', question: 'CQC Registered Status?', required: false, weight: 0.88, doc: 'CQC Cert', docId: 'doc_cqc', why: 'Required if providing "Regulated Activities" like remote diagnosis or triage.' },
+                { id: 'dspt_standards', type: 'checkbox', question: 'DSPT "Standards Exceeded"?', required: false, weight: 0.88, doc: 'DSPT Publication', docId: 'doc_dspt', why: 'The highest data trust tier; signals an SME operating at a "Prime Contractor" level.' }
+            ]},
+            gov: { id: 'gov', title: 'Public sector', badgeName: 'GovFramework verified', icon: '🏛️', items: [
+                // --- REQUIRED SECTION (Weight 0.1) ---
+                { id: 'pub_ce_basic', type: 'checkbox', question: 'Cyber Essentials (Basic)', required: true, weight: 0.1, doc: 'CE Certificate', docId: 'doc_pub_ce', why: 'The absolute entry-level security floor required for any contract handling non-sensitive government data.' },
+                { id: 'pub_wcag', type: 'checkbox', question: 'WCAG 2.1 AA Compliance', required: true, weight: 0.1, doc: 'Accessibility Audit', docId: 'doc_pub_wcag', why: 'Statutory legal duty; ensures digital services are accessible to citizens with diverse needs.' },
+                { id: 'pub_social_value_policy', type: 'checkbox', question: 'Social Value Policy Defined', required: true, weight: 0.1, doc: 'Social Value Policy', docId: 'doc_pub_svp', why: 'Mandatory requirement to prove you have a formal strategy to deliver social/environmental benefits.' },
+                { id: 'pub_modern_slavery', type: 'checkbox', question: 'Modern Slavery Compliance', required: true, weight: 0.1, doc: 'Written Statement', docId: 'doc_pub_ms', why: 'Verification that the startup has mitigated slavery risks in its team and supply chain.' },
+                { id: 'pub_insurance_floor', type: 'checkbox', question: 'Ins. (PI/PL £5m+ Min)', required: true, weight: 0.1, doc: 'Insurance Schedule', docId: 'doc_pub_ins', why: 'Standard contractual floor required by CCS to cover potential liabilities.' },
+
+                // --- OPTIONAL / PROCUREMENT MATURITY (Weight 0.95) ---
+                { id: 'pub_ce_plus', type: 'checkbox', question: 'Cyber Essentials Plus', required: false, weight: 0.95, doc: 'CE+ Certificate', docId: 'doc_pub_cep', why: 'The "Government High-Trust" tier; provides independent technical verification.' },
+                { id: 'pub_ppn_carbon', type: 'checkbox', question: 'PPN 06/21 Carbon Plan', required: false, weight: 0.95, doc: 'CRP Document', docId: 'doc_pub_crp', why: 'Required for central government contracts over £5m; proves Net Zero commitment.' },
+                { id: 'pub_framework_presence', type: 'tiles', question: 'Framework Presence', required: false, weight: 0.95, doc: 'Framework ID', docId: 'doc_pub_framework', why: 'Verification of "pre-vetted" status on CCS portals like G-Cloud or DOS.', options: [{l: 'G-Cloud', v: 1.0}, {l: 'DOS', v: 1.0}, {l: 'DPS', v: 1.0}, {l: 'None', v: 0}] },
+                { id: 'pub_central_id', type: 'text', question: 'Central Digital Platform ID', required: false, weight: 0.95, doc: 'Platform Profile', docId: 'doc_pub_hub', why: 'Readiness for the 2026 "Tell Us Once" mandate; core data is pre-verified on the Gov hub.' },
+                { id: 'pub_sc_clearance', type: 'text', question: 'Security Clearance (SC)', required: false, weight: 0.95, doc: 'BPSS/SC Log', docId: 'doc_pub_sc', why: 'Identifies capacity to handle "Secret" or "Official-Sensitive" data.', sub: ['Number of SC-cleared staff'] },
+                { id: 'pub_quant_impact', type: 'checkbox', question: 'Quantitative Impact Data', required: false, weight: 0.95, doc: 'Last Impact Report', docId: 'doc_pub_impact', why: 'Proves you can report hard metrics like # of local apprenticeships created.' },
+                { id: 'pub_sroi', type: 'text', question: 'Social ROI (SROI) Data', required: false, weight: 0.95, doc: 'SROI Methodology', docId: 'doc_pub_sroi', why: 'Quantifies the financial value of the social impact generated for every £1 spent.', sub: ['Numeric Ratio (e.g., 1:3)'] },
+                { id: 'pub_iso9001', type: 'checkbox', question: 'ISO 9001 Quality Mgmt', required: false, weight: 0.95, doc: 'Quality Certificate', docId: 'doc_pub_iso', why: 'Signals a mature organization with standardized processes for delivery.' },
+                { id: 'pub_prompt_payment', type: 'text', question: 'Prompt Payment (>95%)', required: false, weight: 0.95, doc: 'Payment Records', docId: 'doc_pub_payment', why: 'Aligns with PPN 10/23; proves you pay SME suppliers within 30 days.', sub: ['Percentage (%)'] },
+                { id: 'pub_sme_spend', type: 'text', question: 'SME Supply Chain Spend %', required: false, weight: 0.95, doc: 'Tier 2 Spend Log', docId: 'doc_pub_sme_spend', why: 'Supports the Gov target for 33% of spend to reach SMEs.', sub: ['Numeric (%)'] }
+            ]},
+            retail: { id: 'retail', title: 'Retail', badgeName: 'Retail verified', icon: '🛍️', items: [
+                // --- REQUIRED SECTION (Weight 0.1 - 0.11) ---
+                { id: 'sedex_smeta', type: 'checkbox', question: 'Sedex / SMETA Audit?', required: true, weight: 0.1, doc: 'Audit Report', docId: 'doc_sedex', why: 'Mandatory ethical sourcing verification; required to mitigate labor risks in the retailer’s brand.' },
+                { id: 'gs1_gtin', type: 'checkbox', question: 'GS1 GTIN Alignment?', required: true, weight: 0.11, doc: 'GS1 Cert', docId: 'doc_gs1', why: 'Universal product identifier requirement; essential for global inventory and POS systems.' },
+                { id: 'product_safety_certs', type: 'checkbox', question: 'Product Safety Certs?', required: true, weight: 0.11, doc: 'Safety Docs', docId: 'doc_safety_retail', why: 'Compliance with UKCA/CE and chemical safety (REACH) for physical or IoT goods.' },
+                { id: 'consumer_data_sec', type: 'checkbox', question: 'Consumer Data Security', required: true, weight: 0.11, doc: 'Security Policy', docId: 'doc_retail_sec', why: 'Mandatory floor for retail startups handling customer PII, loyalty data, or transaction records.' },
+
+                // --- OPTIONAL / OPERATIONAL MATURITY (Weight 0.87) ---
+                { id: 'edi_support', type: 'checkbox', question: 'EDI Support (AS2/SFTP)', required: false, weight: 0.87, doc: 'Tech Spec', docId: 'doc_edi', why: 'Allows automated flow of orders and invoices through the retailer’s ERP.' },
+                { id: 'item_traceability', type: 'checkbox', question: 'Item-Level Traceability', required: false, weight: 0.87, doc: 'Traceability Map', docId: 'doc_trace', why: 'The 2026 transparency benchmark: track an individual unit’s journey from source to shelf.' },
+                { id: 'inventory_api', type: 'checkbox', question: 'Real-time Inventory API', required: false, weight: 0.87, doc: 'API Doc', docId: 'doc_inv_api', why: 'Provides live visibility of stock levels to prevent "Out of Stock" events.' },
+                { id: 'circular_retail', type: 'checkbox', question: 'Circular Economy Plan', required: false, weight: 0.87, doc: 'Circularity Policy', docId: 'doc_circ_retail', why: 'Aligns with 2026 regulatory shift toward product repairability and reuse.' },
+                { id: 'otif_performance', type: 'text', question: 'Logistics (OTIF) %', required: false, weight: 0.87, doc: 'Performance Log', docId: 'doc_otif', why: 'Measures "On-Time In-Full" performance; Tier-1s typically require >98% reliability.', sub: ['Numeric Metric (%)'] },
+                { id: 'rfid_ready', type: 'checkbox', question: 'RFID Tagging Ready?', required: false, weight: 0.87, doc: 'RFID Workflow', docId: 'doc_rfid', why: 'Enables automated stock-takes and reduces shrinkage in high-volume environments.' },
+                { id: 'tier_supply_map', type: 'checkbox', question: 'Tier 2/3 Supplier Map', required: false, weight: 0.87, doc: 'Value Chain Map', docId: 'doc_supply_map', why: 'Identifies "supplier’s suppliers" to prevent cascading risks in the global value chain.' },
+                { id: 'returns_automation', type: 'checkbox', question: 'Returns Automation?', required: false, weight: 0.87, doc: 'Returns Policy', docId: 'doc_returns', why: 'Formal process for re-integrating returns to minimize waste and cost.' },
+                { id: 'retail_diversity', type: 'text', question: 'Supplier Diversity %', required: false, weight: 0.87, doc: 'Diversity Report', docId: 'doc_div_report', why: 'Tracks how much of your own spend reaches diverse-led businesses.', sub: ['Numeric (%)'] },
+                { id: 'reach_rohs', type: 'checkbox', question: 'REACH / RoHS Compliant', required: false, weight: 0.87, doc: 'Declaration', docId: 'doc_rohs', why: 'Ensures no restricted hazardous substances are present in hardware/electronics.' },
+                { id: 'last_mile_integration', type: 'checkbox', question: 'Last-Mile Integration', required: false, weight: 0.87, doc: 'Integration Guide', docId: 'doc_last_mile', why: 'Ability to plug into 3rd-party logistics (3PL) or direct-to-consumer networks.' }
+            ]},
+            aero: { id: 'aero', title: 'Aerospace, defence & industrial', badgeName: 'Aero/Def verified', icon: '⚙️', items: [
+                // --- REQUIRED SECTION (Weight 0.1) ---
+                { id: 'as9100_cert', type: 'checkbox', question: 'Is AS9100 / Def Stan certified?', required: true, weight: 0.1, doc: 'Quality Certificate', docId: 'doc_as9100', why: 'The gold standard for quality; incorporates ISO 9001 with specific safety/reliability requirements.' },
+                { id: 'export_compliance', type: 'checkbox', question: 'Is ITAR / EAR / Export compliant?', required: true, weight: 0.1, doc: 'Export Policy', docId: 'doc_export_ctrl', why: 'Mandatory for dual-use tech; ensures compliance with US and UK Strategic Export Control lists.' },
+                { id: 'cyber_essentials_plus', type: 'checkbox', question: 'Is Cyber Essentials Plus held?', required: true, weight: 0.1, doc: 'CE+ Certificate', docId: 'doc_ce_plus', why: 'Absolute technical floor for MOD suppliers handling "Official" or higher data.' },
+                { id: 'ncage_code', type: 'text', question: 'Is NCAGE / CAGE Code held?', required: true, weight: 0.1, doc: 'Registration Proof', docId: 'doc_ncage', why: 'NATO Commercial and Government Entity code; essential for NATO-member supply systems.', sub: ['Enter 5-digit code'] },
+
+                // --- OPTIONAL / INDUSTRY SPECIFIC (Weight 1.6) ---
+                { id: 'joscar_status', type: 'tiles', question: 'Is JOSCAR registered?', required: false, weight: 1.6, doc: 'JOSCAR Profile', docId: 'doc_joscar', why: 'Cross-Prime register (BAE, Babcock) removing need for duplicate audits.', options: [{l: 'Stage 1', v: 0.5}, {l: 'Stage 2', v: 1.0}, {l: 'Not Registered', v: 0}] },
+                { id: 'nadcap_accreditation', type: 'checkbox', question: 'Is Nadcap accredited?', required: false, weight: 1.6, doc: 'Nadcap Cert', docId: 'doc_nadcap', why: 'Required for special processes like heat treating or non-destructive testing.' },
+                { id: 'as9102_fair', type: 'checkbox', question: 'AS9102 FAIR process in place?', required: false, weight: 1.6, doc: 'Sample FAIR', docId: 'doc_fair', why: 'First Article Inspection Requirement; verifies consistent production to spec.' },
+                { id: 'sms_manual', type: 'checkbox', question: 'Safety Management System (SMS)?', required: false, weight: 1.6, doc: 'SMS Manual', docId: 'doc_sms', why: 'Proactive approach to hazard identification (EASA/FAA standard).' },
+                { id: 'easa_faa_approvals', type: 'checkbox', question: 'EASA / FAA Part 21 Approvals?', required: false, weight: 1.6, doc: 'Approval Cert', docId: 'doc_easa', why: 'Critical for hardware; proves authority to design (DOA) or manufacture (POA).' },
+                { id: 'social_value_mod', type: 'checkbox', question: 'Social Value Model Alignment?', required: false, weight: 1.6, doc: 'Social Value Pol.', docId: 'doc_social_mod', why: 'UK MOD tenders mandate minimum 10% weighting for social value themes.' }
+            ]},
+            telecom: { id: 'telecom', title: 'Telecoms & media', badgeName: 'Telecoms verified', icon: '📡', items: [
+                // --- REQUIRED SECTION (Weight 0.1) ---
+                { id: 'iso_27011_cast', type: 'checkbox', question: 'ISO 27011 / CAS(T) held?', required: true, weight: 0.1, doc: 'Quality Cert', docId: 'doc_iso_27011', why: 'Sector-specific security standard for carrier-grade network integrity.' },
+                { id: 'ofcom_regulatory', type: 'checkbox', question: 'Ofcom / Regulatory Statement?', required: true, weight: 0.1, doc: 'Regulatory Policy', docId: 'doc_ofcom_reg', why: 'Adherence to Ofcom General Conditions and media distribution regulations.' },
+                { id: 'tsa_scope', type: 'tiles', question: 'TSA 2021 Scope Check?', required: true, weight: 0.1, doc: 'Scope Memo', docId: 'doc_tsa_scope', why: 'Mandatory check under the Telecommunications (Security) Act for legal duties.', options: [{l: 'In Scope', v: 1.0}, {l: 'Out of Scope', v: 1.0}] },
+                { id: 'osa_dsa_cat', type: 'tiles', question: 'OSA / DSA Categorisation?', required: true, weight: 0.1, doc: 'Categorisation Doc', docId: 'doc_osa_cat', why: 'Identifies duties under the Online Safety Act (UK) or Digital Services Act (EU).', options: [{l: 'Cat 1', v: 1.0}, {l: 'Cat 2A/2B', v: 1.0}, {l: 'Exempt', v: 1.0}] },
+
+                // --- OPTIONAL / TECHNICAL MATURITY (Weight 0.96) ---
+                { id: 'content_drm', type: 'checkbox', question: 'Content DRM Implementation', required: false, weight: 0.96, doc: 'Arch Diagram', docId: 'doc_drm', why: 'Proves robust protection of proprietary IP via Technical Protection Measures.' },
+                { id: 'tsa_cop_audit', type: 'checkbox', question: 'TSA Code of Practice Audit?', required: false, weight: 0.96, doc: 'Audit Summary', docId: 'doc_tsa_audit', why: 'Readiness for 2026 TSA milestones; validates 258 technical guidance measures.' },
+                { id: 'signaling_protection', type: 'checkbox', question: 'Signaling Plane Protection?', required: false, weight: 0.96, doc: 'Tech Spec', docId: 'doc_ss7_prot', why: 'Protection against exploitation via SS7, Diameter, or international protocols.' },
+                { id: 'age_verification', type: 'checkbox', question: 'Age Verification Systems?', required: false, weight: 0.96, doc: 'System Flowchart', docId: 'doc_age_v', why: 'Statutory requirement for high-risk content; prevents access by minors.' },
+                { id: 'moderation_sla', type: 'checkbox', question: 'Content Moderation SLAs?', required: false, weight: 0.96, doc: 'Moderation SOP', docId: 'doc_mod_sla', why: 'Operational maturity in removing illegal content under OSA/DSA mandates.' },
+                { id: 'infra_uptime', type: 'tiles', question: 'Infrastructure Uptime (5 9s)?', required: false, weight: 0.96, doc: 'SLA Template', docId: 'doc_telecom_sla', why: 'Five Nines (99.999%) is the gold standard for mission-critical connectivity.', options: [{l: '99.999%', v: 1.0}, {l: '99.99%', v: 0.8}, {l: '99.9%', v: 0.5}] },
+                { id: 'five_g_sec', type: 'checkbox', question: '5G Security Specs Alignment', required: false, weight: 0.96, doc: 'Tech Docs', docId: 'doc_5g_sec', why: 'Follows ENISA or GSMA NESAS standards for virtualized network functions.' },
+                { id: 'psia_audit', type: 'checkbox', question: 'PSIA for Digital Services?', required: false, weight: 0.96, doc: 'Last PSIA Doc', docId: 'doc_psia', why: 'Integrated risk management for new features (Privacy & Security Impact Assessment).' },
+                { id: 'network_latency', type: 'tiles', question: 'Network Latency Performance', required: false, weight: 0.96, doc: 'Performance Log', docId: 'doc_latency', why: 'Signals high-tier CDN and edge computing performance.', options: [{l: '<10ms', v: 1.0}, {l: '<50ms', v: 0.5}] },
+                { id: 'sub_processor_loc', type: 'text', question: 'Sub-processor Data Loc.', required: false, weight: 0.96, doc: 'Vendor Map', docId: 'doc_data_sov', why: 'Critical for data sovereignty audits (CDNs, Cloud).', sub: ['List processing locations'] }
+            ]},
+            sustainability: { id: 'sustainability', title: 'Sustainability', badgeName: 'Eco verified', icon: '🌱', items: [
+                // --- REQUIRED SECTION (Weight 0.15 - 0.16) ---
+                { id: 'scope_1_2_emissions', type: 'tiles', question: 'Scope 1 & 2 Emissions', required: true, weight: 0.15, doc: 'Emissions Report', docId: 'doc_s12_report', why: 'Basic carbon disclosure required for corporate CSRD reporting.', options: [{l: 'Reported', v: 1.0}, {l: 'Not Reported', v: 0}] },
+                { id: 'climate_transition_plan', type: 'checkbox', question: 'Climate Transition Plan', required: true, weight: 0.15, doc: 'Transition Plan', docId: 'doc_climate_plan', why: 'Time-bound, science-based pathway to reaching Net Zero.' },
+                { id: 'emissions_reporting_level', type: 'tiles', question: 'Emissions Reporting Level', required: true, weight: 0.16, doc: 'Carbon Report', docId: 'doc_emissions_lvl', why: 'Boundary check for which emissions the startup is tracking.', options: [{l: 'Scope 1-2', v: 0.5}, {l: 'Scope 1-3', v: 1.0}, {l: 'None', v: 0}] },
+
+                // --- OPTIONAL / ADVANCED MATURITY (Weight 1.06) ---
+                { id: 'scope_3_value_chain', type: 'checkbox', question: 'Scope 3 Value Chain Data', required: false, weight: 1.06, doc: 'Scope 3 Data Set', docId: 'doc_s3_data', why: 'Advanced disclosure of indirect value-chain emissions for enterprise ESG reporting.' },
+                { id: 'double_materiality', type: 'checkbox', question: 'Double Materiality (DMA)', required: false, weight: 1.06, doc: 'DMA Report', docId: 'doc_dma_sustainability', why: '2026 strategic benchmark: understanding both environmental impact and financial risk.' },
+                { id: 'hotspot_breakdown', type: 'checkbox', question: 'Hotspot Breakdown', required: false, weight: 1.06, doc: 'Hotspot Map', docId: 'doc_hotspot_map', why: 'Detailed transparency on where 80%+ of indirect emissions reside (e.g., supply chain).' },
+                { id: 'product_carbon_footprint', type: 'text', question: 'Product Carbon Footprint', required: false, weight: 1.06, doc: 'LCA Report', docId: 'doc_pcf_health', why: 'Critical for manufacturing; satisfies client product-level data.', sub: ['kg CO2e / unit'] },
+                { id: 'embodied_carbon_cloud', type: 'checkbox', question: 'Embodied Carbon (Cloud)', required: false, weight: 1.06, doc: 'Cloud ESG Report', docId: 'doc_cloud_carbon', why: 'Mandatory for AI/Software; provides carbon data for the underlying cloud infrastructure used.' },
+                { id: 'automated_esg_reporting', type: 'checkbox', question: 'Automated Reporting', required: false, weight: 1.06, doc: 'Tech Spec', docId: 'doc_auto_rpt', why: 'Preferred by procurement; allows "pushing" data directly into client ESG systems.' },
+                { id: 'recyclability_plan', type: 'checkbox', question: 'Recyclability Plan', required: false, weight: 1.06, doc: 'Circularity Policy', docId: 'doc_recyclability', why: 'Aligns with 2026 Circular Economy rules for hardware and tech components.' },
+                { id: 'energy_by_source', type: 'checkbox', question: 'Energy by Source', required: false, weight: 1.06, doc: 'Utility Summary', docId: 'doc_energy_src', why: 'Detailed breakdown of renewable vs. non-renewable energy use to validate green claims.' },
+                { id: 'nature_risk_screening', type: 'checkbox', question: 'Nature Risk Screening', required: false, weight: 1.06, doc: 'Nature Policy', docId: 'doc_nature_risk', why: 'Emerging requirement to screen operations for impact on sensitive biodiversity areas.' }
+            ]},
+        };
+
+        // --- APP LOGIC ---
+        class App {
+            constructor() {
+                this.state = {
+                    answers: {}, 
+                    selections: {}, 
+                    sectorAnswers: {}, 
+                    uploads: new Set(),
+                    currentSlide: 0,
+                    currentSector: 'fin',
+                    formData: { country: 'uk' },
+                    currency: '£',
+                    // Animation State
+                    chartValues: {1:1, 2:1, 3:1, 4:1, 5:1, 6:1},
+                    targetValues: {1:1, 2:1, 3:1, 4:1, 5:1, 6:1}
+                };
+                
+                this.init();
+            }
+
+            init() {
+                this.renderCountryOptions();
+                this.updateRegistryHint();
+                this.renderChart(this.state.chartValues); // Initial Render
+                this.animateChart(); // Start Animation Loop
+                this.updateAll();
+            }
+
+            // Export Function
+            downloadAssessment() {
+                const scores = this.calculateScores();
+                
+                const exportData = {
+                    id: 'submission-' + Date.now(),
+                    timestamp: new Date().toISOString(),
+                    company_info: {
+                        name: document.getElementById('regName').value || 'Untitled Company',
+                        reg_no: document.getElementById('regNo').value,
+                        website: document.getElementById('website').value,
+                        address: {
+                            line1: document.getElementById('addr1').value,
+                            line2: document.getElementById('addr2').value,
+                            city: document.getElementById('city').value,
+                            state: document.getElementById('state').value,
+                            zip: document.getElementById('zip').value
+                        },
+                        country: this.state.formData.country,
+                        currency: this.state.currency
+                    },
+                    selected_sector: this.state.currentSector,
+                    core_answers: this.state.answers,
+                    sector_answers: this.state.sectorAnswers,
+                    uploaded_documents: Array.from(this.state.uploads),
+                    scores: scores
+                };
+
+                const dataStr = "data:text/json;charset=utf-8," + encodeURIComponent(JSON.stringify(exportData, null, 2));
+                const downloadAnchorNode = document.createElement('a');
+                downloadAnchorNode.setAttribute("href", dataStr);
+                downloadAnchorNode.setAttribute("download", `founders_match_assessment_${Date.now()}.json`);
+                document.body.appendChild(downloadAnchorNode); // required for firefox
+                downloadAnchorNode.click();
+                downloadAnchorNode.remove();
+            }
+
+            // Animation Loop using RequestAnimationFrame for smooth interpolation
+            animateChart() {
+                let changed = false;
+                const speed = 0.1; // Speed factor (0.1 = smooth, 1 = instant)
+
+                for (let i = 1; i <= 6; i++) {
+                    const diff = this.state.targetValues[i] - this.state.chartValues[i];
+                    if (Math.abs(diff) > 0.005) {
+                        this.state.chartValues[i] += diff * speed;
+                        changed = true;
+                    } else {
+                        this.state.chartValues[i] = this.state.targetValues[i];
+                    }
+                }
+
+                if (changed) {
+                    this.updateChartVisuals(this.state.chartValues);
+                }
+                requestAnimationFrame(() => this.animateChart());
+            }
+
+            // --- State Management ---
+            // NEW: Helper to toggle core checkboxes dynamically
+            toggleCheck(dimId, itemIdx) {
+                const currentVal = this.state.answers[dimId]?.[itemIdx] || 0;
+                this.handleAnswer(dimId, itemIdx, currentVal ? 0 : 1);
+            }
+
+            // NEW: Helper to toggle sector checkboxes dynamically
+            toggleSectorCheck(sectorId, itemId) {
+                const currentVal = this.state.sectorAnswers[sectorId]?.[itemId];
+                this.handleSectorAnswer(sectorId, itemId, !currentVal);
+            }
+
+            handleSectorTile(sectorId, itemId, value, optIndex) {
+                if (!this.state.sectorAnswers[sectorId]) this.state.sectorAnswers[sectorId] = {};
+                // Store a truthy value (even if option value is 0) so the completion badge logic registers it as answered
+                this.state.sectorAnswers[sectorId][itemId] = value === 0 ? 0.001 : value; 
+                this.state.sectorAnswers[sectorId][itemId + '_opt'] = optIndex;
+                this.updateSectorView();
+                this.renderBadges(this.calculateScores());
+            }
+
+            handleSectorText(sectorId, itemId, value) {
+                if (!this.state.sectorAnswers[sectorId]) this.state.sectorAnswers[sectorId] = {};
+                this.state.sectorAnswers[sectorId][itemId] = value;
+                this.updateSectorView();
+                this.renderBadges(this.calculateScores());
+            }
+
+            handleAnswer(dimId, itemIdx, value, optIndex = null) {
+                if (!this.state.answers[dimId]) this.state.answers[dimId] = {};
+                this.state.answers[dimId][itemIdx] = value;
+
+                if (optIndex !== null) {
+                    if (!this.state.selections[dimId]) this.state.selections[dimId] = {};
+                    this.state.selections[dimId][itemIdx] = optIndex;
+                }
+
+                this.updateUIForAnswer(dimId, itemIdx, value, optIndex);
+                this.recalculateTargets(); 
+            }
+
+            updateUIForAnswer(dimId, itemIdx, value, optIndex) {
+                const item = CORE_DIMENSIONS.find(d => d.id === dimId).items[itemIdx];
+                const isUploaded = this.state.uploads.has(item.docId);
+                
+                if (item.type === 'tiles') {
+                    const group = document.getElementById(`tiles-${dimId}-${itemIdx}`);
+                    if(group) {
+                        Array.from(group.children).forEach((btn, idx) => {
+                            if (idx === optIndex) {
+                                // Selected State: Bold Green bg, Dark Green text, Bold font
+                                btn.className = 'flex-1 py-2 px-3 rounded border text-xs font-bold transition-all bg-[#ECF598] border-[#475609] text-[#2B2A2A]';
+                            } else {
+                                // Default State: Medium font (was medium, ensuring it stays medium)
+                                btn.className = 'flex-1 py-2 px-3 rounded border text-xs font-medium transition-all border-slate-200 text-slate-500 hover:border-slate-400 hover:bg-[#F8F8F8]';
+                            }
+                        });
+                    }
+                } else {
+                    const checkContainer = document.getElementById(`check-${dimId}-${itemIdx}`);
+                    if(checkContainer) {
+                         const box = checkContainer.querySelector('div');
+                         const svg = `<span class="text-[#475609]">${ICONS.check}</span>`;
+                         if(value) {
+                             box.className = 'w-5 h-5 flex-shrink-0 rounded border-2 flex items-center justify-center transition-all bg-[#D9EB31] border-[#475609]';
+                             box.style.border = ''; // Reset inline border
+                             box.innerHTML = svg;
+                         } else {
+                             box.className = 'w-5 h-5 flex-shrink-0 rounded border-2 flex items-center justify-center transition-all border-slate-300 bg-white';
+                             // Keep strict border style on unchecked to prevent invisibility
+                             box.style.border = '2px solid #cbd5e1'; 
+                             box.innerHTML = '';
+                         }
+                    }
+                }
+
+                // Update Reveal
+                const reveal = document.getElementById(`reveal-${dimId}-${itemIdx}`);
+                const isAnswered = (item.type === 'tiles' && optIndex !== null && optIndex !== -1) || (item.type !== 'tiles' && value > 0);
+                
+                if(reveal) {
+                    if (isAnswered) {
+                        reveal.classList.remove('max-h-0', 'opacity-0', 'pointer-events-none');
+                        reveal.classList.add('max-h-[300px]', 'opacity-100', 'mt-3', 'pt-3', 'border-t', 'border-dashed', 'border-slate-100');
+                    } else {
+                        reveal.classList.add('max-h-0', 'opacity-0', 'pointer-events-none');
+                        reveal.classList.remove('max-h-[300px]', 'opacity-100', 'mt-3', 'pt-3', 'border-t', 'border-dashed', 'border-slate-100');
+                    }
+                }
+
+                // Update Warning
+                const warningDiv = document.getElementById(`doc-warning-${dimId}-${itemIdx}`);
+                if (warningDiv) {
+                    if (value > 0 && !isUploaded) {
+                        warningDiv.classList.remove('hidden');
+                    } else {
+                        warningDiv.classList.add('hidden');
+                    }
+                }
+
+                this.checkRequirements(dimId);
+            }
+
+            recalculateTargets() {
+                const scores = this.calculateScores();
+                this.state.targetValues = scores;
+                this.renderStats(scores);
+                this.renderBadges(scores);
+            }
+
+            checkRequirements(dimId) {
+                const dim = CORE_DIMENSIONS.find(d => d.id === dimId);
+                const answers = this.state.answers[dimId] || {};
+                const selections = this.state.selections[dimId] || {};
+                
+                let missing = false;
+                dim.items.forEach((item, idx) => {
+                    if (item.required) {
+                        const val = answers[idx] || 0;
+                        const optIdx = selections[idx];
+                        const isAnswered = (item.type === 'tiles' && optIdx !== undefined && optIdx !== -1) || (item.type !== 'tiles' && val > 0);
+                        const isUploaded = this.state.uploads.has(item.docId);
+                        
+                        // If they haven't answered, OR they selected a positive value but didn't upload
+                        if (!isAnswered || (val > 0 && !isUploaded)) {
+                            missing = true;
+                        }
+                    }
+                });
+
+                const warningEl = document.getElementById(`warning-${dimId}`);
+                const scoreEl = document.getElementById(`score-display-${dimId}`);
+                
+                if (warningEl) {
+                    if (missing) {
+                        warningEl.classList.remove('hidden');
+                        if(scoreEl) scoreEl.classList.add('text-amber-600');
+                    } else {
+                        warningEl.classList.add('hidden');
+                        if(scoreEl) scoreEl.classList.remove('text-amber-600');
+                    }
+                }
+            }
+
+            handleSectorAnswer(sectorId, itemId, checked) {
+                if (!this.state.sectorAnswers[sectorId]) this.state.sectorAnswers[sectorId] = {};
+                this.state.sectorAnswers[sectorId][itemId] = checked;
+                
+                const el = document.getElementById(`sec-check-${sectorId}-${itemId}`);
+                if(el) {
+                    const box = el.querySelector('div');
+                     if(checked) {
+                         box.className = 'w-4 h-4 flex-shrink-0 rounded border flex items-center justify-center transition-all bg-[#D9EB31] border-[#D9EB31]';
+                         box.style.border = '';
+                         box.innerHTML = `<span class="text-[#2B2A2A]">${ICONS.check}</span>`;
+                     } else {
+                         box.className = 'w-4 h-4 flex-shrink-0 rounded border flex items-center justify-center transition-all border-slate-500 bg-transparent';
+                         box.style.border = '1px solid #64748b'; // Fallback
+                         box.innerHTML = '';
+                     }
+                }
+                
+                // Re-calculate sector badges on every click
+                this.renderBadges(this.calculateScores());
+            }
+
+            handleUpload(docId) {
+                if (this.state.uploads.has(docId)) {
+                    this.state.uploads.delete(docId);
+                } else {
+                    this.state.uploads.add(docId);
+                    CORE_DIMENSIONS.forEach(dim => {
+                        dim.items.forEach((item, idx) => {
+                            if(item.docId === docId && item.type === 'checkbox') {
+                                this.handleAnswer(dim.id, idx, 1);
+                            }
+                        });
+                    });
+                     Object.keys(SECTOR_MODULES).forEach(key => {
+                        SECTOR_MODULES[key].items.forEach(item => {
+                            if(item.docId === docId) {
+                                this.handleSectorAnswer(key, item.id, true);
+                            }
+                        });
+                    });
+                }
+                // Full update to sync upload buttons states
+                this.updateDocButtons();
+                // We also need to refresh sector buttons if they are rendered
+                this.updateSectorView();
+                this.recalculateTargets();
+                this.updateCoreProtocol(); // Re-render core slide so warnings disappear naturally
+            }
+
+            toggleCountryDropdown(e) {
+                if (e) e.stopPropagation();
+                const menu = document.getElementById('country-menu');
+                menu.classList.toggle('hidden');
+            }
+
+            selectCountry(code, label) {
+                this.state.formData.country = code;
+                let currency = '€';
+                if (code === 'uk') currency = '£';
+                else if (code === 'us') currency = '$';
+                
+                const currSelect = document.getElementById('currency-selector');
+                if(currSelect) currSelect.value = currency;
+
+                this.setCurrency(currency);
+                document.getElementById('country-selected-text').innerText = label;
+                document.getElementById('country-menu').classList.add('hidden');
+                this.updateRegistryHint();
+            }
+
+            setCurrency(c) {
+                this.state.currency = c;
+                const sel = document.getElementById('currency-selector');
+                if(sel) sel.value = c;
+                this.updateCoreProtocol();
+                this.updateSectorView(); 
+            }
+
+            changeSlide(dir) {
+                const len = CORE_DIMENSIONS.length;
+                this.state.currentSlide = (this.state.currentSlide + dir + len) % len;
+                this.updateCoreProtocol();
+            }
+
+            setSector(secId) {
+                this.state.currentSector = secId;
+                this.updateSectorView();
+            }
+
+            resetAll() {
+                this.state.answers = {};
+                this.state.selections = {};
+                this.state.sectorAnswers = {};
+                this.state.uploads = new Set();
+                this.state.currentSlide = 0;
+                this.state.targetValues = {1:1, 2:1, 3:1, 4:1, 5:1, 6:1};
+                
+                document.getElementById('regName').value = '';
+                document.getElementById('regNo').value = '';
+                document.getElementById('website').value = '';
+                document.getElementById('addr1').value = '';
+                document.getElementById('addr2').value = '';
+                document.getElementById('city').value = '';
+                document.getElementById('state').value = '';
+                document.getElementById('zip').value = '';
+                
+                this.updateRegistryHint();
+                this.updateAll();
+            }
+
+            // --- Calculation Helpers ---
+            calculateScores() {
+                const scores = {};
+                CORE_DIMENSIONS.forEach(dim => {
+                    const dimAns = this.state.answers[dim.id] || {};
+                    let totalWeightedScore = 0;
+                    let totalPossibleWeight = 0;
+                    
+                    dim.items.forEach((item, idx) => {
+                        totalPossibleWeight += item.weight;
+                        let val = dimAns[idx] || 0;
+                        
+                        // NEW LOGIC: Document upload checker
+                        if (val > 0) {
+                            const isUploaded = this.state.uploads.has(item.docId);
+                            if (!isUploaded) {
+                                if (item.required) {
+                                    val = 0; // 0 points if required doc is missing
+                                } else {
+                                    val = val * 0.5; // Half points if optional doc is missing
+                                }
+                            }
+                        }
+
+                        totalWeightedScore += (val * item.weight);
+                    });
+
+                    if (totalPossibleWeight === 0) {
+                        scores[dim.id] = 1;
+                        return;
+                    }
+
+                    const pct = totalWeightedScore / totalPossibleWeight;
+                    
+                    // Continuous Scoring Logic:
+                    // 0% -> Level 1
+                    // 100% -> Level 5
+                    // Formula: 1 + (pct * 4)
+                    let lvl = 1 + (pct * 4);
+                    
+                    // Clamp to valid range
+                    lvl = Math.max(1, Math.min(5, lvl));
+                    
+                    scores[dim.id] = lvl;
+                });
+                return scores;
+            }
+
+            // --- Rendering ---
+            updateAll() {
+                this.recalculateTargets();
+                this.updateDocButtons();
+                this.updateCoreProtocol();
+                this.updateSectorView();
+            }
+
+            formatText(text) {
+                return text.replace(/£/g, this.state.currency);
+            }
+
+            renderCountryOptions() {
+                const countries = [
+                    { code: 'fr', label: 'France' },
+                    { code: 'de', label: 'Germany' },
+                    { code: 'gr', label: 'Greece' },
+                    { code: 'is', label: 'Iceland' },
+                    { code: 'ie', label: 'Ireland' },
+                    { code: 'it', label: 'Italy' },
+                    { code: 'lv', label: 'Latvia' },
+                    { code: 'lu', label: 'Luxembourg' },
+                    { code: 'nl', label: 'Netherlands' },
+                    { code: 'se', label: 'Nordics (SE/DK/NO/FI)' },
+                    { code: 'es', label: 'Spain' },
+                    { code: 'uk', label: 'United Kingdom' },
+                    { code: 'eu_other', label: 'Rest of Europe' }
+                ];
+
+                const menu = document.getElementById('country-menu');
+                menu.innerHTML = countries.map(c => `
+                    <button type="button" onclick="app.selectCountry('${c.code}', '${c.label}')" class="w-full text-left px-4 py-2 text-sm text-fm-charcoal hover:bg-slate-50 transition-colors">
+                        ${c.label}
+                    </button>
+                `).join('');
+            }
+
+            updateRegistryHint() {
+                const info = REGISTRY_INFO[this.state.formData.country];
+                document.getElementById('regNo').placeholder = info.label;
+                const btn = document.getElementById('btn-doc_incorp');
+                const isUploaded = this.state.uploads.has('doc_incorp');
+                this.renderDocButton(btn, 'doc_incorp', info.doc, isUploaded);
+            }
+
+            renderChart(scores) {
+                // Expanded labels to full text
+                const labels = ['Structure', 'Security', 'AI Governance', 'Commercial', 'Operations'];
+                const size = 300;
+                const center = size / 2;
+                const radius = 100;
+                const steps = 20; // Increased gradations (0.25 steps) to allow finer movement
+                
+                const getCoords = (val, idx, total) => {
+                    const angle = (Math.PI * 2 * idx) / total - Math.PI / 2;
+                    const r = (val / 5) * radius;
+                    return { x: center + r * Math.cos(angle), y: center + r * Math.sin(angle) };
+                };
+
+                let svg = `<svg width="100%" height="100%" viewBox="0 0 ${size} ${size}" class="overflow-visible">`;
+                
+                for (let i = 1; i <= steps; i++) {
+                    const val = i / 4; // 0.25, 0.5, 0.75, 1.0 ... 5.0
+                    const points = labels.map((_, idx) => {
+                        const {x, y} = getCoords(val, idx, labels.length);
+                        return `${x},${y}`;
+                    }).join(' ');
+                    
+                    // Lighter stroke for half-steps, slightly darker for whole integers
+                    const strokeColor = (i % 4 === 0) ? '#E2E8F0' : '#F8FAFC';
+                    svg += `<polygon points="${points}" fill="none" stroke="${strokeColor}" stroke-width="1"/>`;
+                }
+                
+                labels.forEach((l, idx) => {
+                    const outer = getCoords(5, idx, labels.length);
+                    const labelPos = getCoords(5.8, idx, labels.length);
+                    svg += `<line x1="${center}" y1="${center}" x2="${outer.x}" y2="${outer.y}" stroke="#E2E8F0" stroke-width="1"/>`;
+                    svg += `<text x="${labelPos.x}" y="${labelPos.y}" text-anchor="middle" dominant-baseline="middle" class="text-[10px] font-bold fill-slate-500 uppercase tracking-wider font-sans">${l}</text>`;
+                });
+
+                svg += `<polygon id="chart-polygon" points="" fill="#D9EB31" fill-opacity="0.3" stroke="#475609" stroke-width="2" class="chart-polygon"/>`;
+                
+                labels.forEach((_, idx) => {
+                    svg += `<circle id="chart-point-${idx}" cx="${center}" cy="${center}" r="3" fill="#FFFFFF" stroke="#475609" stroke-width="2" class="chart-point"/>`;
+                });
+                
+                svg += `</svg>`;
+                document.getElementById('radar-chart').innerHTML = svg;
+                
+                this.updateChartVisuals(scores);
+            }
+
+            updateChartVisuals(scores) {
+                // Ensure labels match renderChart for consistent indexing
+                const labels = ['Structure', 'Security', 'AI Governance', 'Commercial', 'Operations'];
+                const size = 300;
+                const center = size / 2;
+                const radius = 100;
+                
+                const getCoords = (val, idx, total) => {
+                    const angle = (Math.PI * 2 * idx) / total - Math.PI / 2;
+                    const r = (val / 5) * radius;
+                    return { x: center + r * Math.cos(angle), y: center + r * Math.sin(angle) };
+                };
+
+                const pointsArr = Object.values(scores).map((s, idx) => getCoords(s, idx, labels.length));
+                const pointsStr = pointsArr.map(p => `${p.x},${p.y}`).join(' ');
+
+                const poly = document.getElementById('chart-polygon');
+                if(poly) poly.setAttribute('points', pointsStr);
+
+                pointsArr.forEach((p, idx) => {
+                    const point = document.getElementById(`chart-point-${idx}`);
+                    if(point) {
+                        point.setAttribute('cx', p.x);
+                        point.setAttribute('cy', p.y);
+                    }
+                });
+            }
+
+            renderStats(scores) {
+                const total = Object.values(scores).reduce((a, b) => a + b, 0);
+                const pct = Math.min(100, Math.round(((total - 5) / 24) * 100));
+                
+                document.getElementById('progress-text').innerText = `${pct}%`;
+                document.getElementById('progress-bar').style.width = `${pct}%`;
+
+                const avg = total / 5;
+                const tierEl = document.getElementById('tier-badge');
+                if (avg >= 5) {
+                    tierEl.innerText = "Enterprise ready";
+                    tierEl.className = "px-3 py-1 rounded-sm font-bold text-xs border transition-all bg-[#ECF598] text-[#475609] border-[#475609]";
+                } else if (avg >= 3) {
+                    tierEl.innerText = "Growth stage";
+                    tierEl.className = "px-3 py-1 rounded-sm font-bold text-xs border transition-all bg-white text-[#2B2A2A] border-[#2B2A2A]";
+                } else {
+                    tierEl.innerText = "Early stage";
+                    tierEl.className = "px-3 py-1 rounded-sm font-bold text-xs border transition-all bg-white text-slate-500 border-slate-200";
+                }
+            }
+
+            renderBadges(scores) {
+                const badges = [
+                    { name: "Risk-proof", icon: ICONS.lock, earned: scores[1] >= 4 && scores[2] >= 4 },
+                    { name: "Future ready", icon: ICONS.zapSm, earned: scores[3] >= 4 && scores[4] >= 4 },
+                    { name: "Commercial", icon: ICONS.briefcase, earned: scores[5] >= 4 && scores[1] >= 3 },
+                    { name: "Scale ops", icon: ICONS.trending, earned: scores[6] >= 4 && scores[2] >= 3 }
+                ];
+
+                document.getElementById('badges-container').innerHTML = badges.map(b => `
+                    <div class="p-3 rounded border flex flex-col items-center justify-center text-center transition-all ${b.earned ? 'border-slate-300 bg-[#F8F8F8] opacity-100' : 'border-dashed border-slate-200 opacity-40'}">
+                        <span class="mb-1 ${!b.earned ? 'grayscale' : ''}">${b.icon}</span>
+                        <span class="text-[10px] font-bold text-slate-600">${b.name}</span>
+                        ${b.earned ? '<span class="text-[9px] bg-slate-200 text-slate-500 px-1.5 rounded mt-1">Pending review</span>' : ''}
+                    </div>
+                `).join('');
+
+                // Sector Badges Logic
+                const sectorBadgesWrapper = document.getElementById('sector-badges-wrapper');
+                const sectorContainer = document.getElementById('sector-badges-container');
+                let sectorHtml = '';
+                let hasSectors = false;
+
+                Object.values(SECTOR_MODULES).forEach(mod => {
+                    const ans = this.state.sectorAnswers[mod.id] || {};
+                    
+                    // Check requirements
+                    const allReqMet = mod.items.every(item => {
+                        const val = ans[item.id];
+                        const isUploaded = this.state.uploads.has(item.docId);
+                        if (item.required) {
+                            return val && isUploaded; // Must be checked AND uploaded
+                        }
+                        return true;
+                    });
+                    
+                    // Calculate progression for the progress bar
+                    let completedCount = 0;
+                    mod.items.forEach(item => {
+                        const val = ans[item.id];
+                        const isUploaded = this.state.uploads.has(item.docId);
+                        if (val && isUploaded) {
+                            completedCount++;
+                        }
+                    });
+                    const completionPct = Math.round((completedCount / mod.items.length) * 100);
+                    const allMet = completedCount === mod.items.length; // Gold requires everything checked AND uploaded
+
+                    if (allReqMet) {
+                        hasSectors = true;
+                        
+                        // Styling for Gold vs Verified
+                        const isGold = allMet;
+                        const containerClass = isGold 
+                            ? 'bg-[#D9EB31] border-[#475609] text-[#2B2A2A]' 
+                            : 'bg-white border-slate-200 text-slate-600';
+                        
+                        const labelClass = isGold
+                            ? 'bg-white/60 text-[#475609] border border-[#475609]/20'
+                            : 'bg-slate-100 text-slate-500 border border-slate-200';
+                            
+                        const labelText = isGold ? 'Gold Standard' : 'Verified';
+                        
+                        const trackClass = isGold ? 'bg-[#475609]/20' : 'bg-slate-200';
+                        const fillClass = isGold ? 'bg-[#2B2A2A]' : 'bg-[#475609]';
+
+                        sectorHtml += `
+                            <div class="p-3 rounded border flex flex-col gap-2 shadow-sm transition-all ${containerClass}">
+                                <div class="flex items-center justify-between">
+                                    <div class="flex items-center gap-2">
+                                        <span>${mod.icon}</span>
+                                        <span class="text-[10px] font-bold">${mod.badgeName}</span>
+                                    </div>
+                                    <span class="text-[9px] px-2 py-0.5 rounded font-bold uppercase tracking-wide ${labelClass}">${labelText}</span>
+                                </div>
+                                <div class="w-full ${trackClass} rounded-full h-1.5 overflow-hidden mt-0.5" title="${completionPct}% Complete">
+                                    <div class="${fillClass} h-full rounded-full transition-all duration-500" style="width: ${completionPct}%"></div>
+                                </div>
+                            </div>
+                        `;
+                    }
+                });
+
+                if(hasSectors) {
+                    sectorBadgesWrapper.classList.remove('hidden');
+                    sectorContainer.innerHTML = sectorHtml;
+                } else {
+                    sectorBadgesWrapper.classList.add('hidden');
+                }
+            }
+
+            updateCoreProtocol() {
+                document.getElementById('slide-counter').innerText = `${this.state.currentSlide + 1} / ${CORE_DIMENSIONS.length}`;
+                
+                const dim = CORE_DIMENSIONS[this.state.currentSlide];
+                // Use targetValues directly for display to avoid jumping during animation
+                const currentScore = this.state.targetValues[dim.id] || 1;
+                
+                // Sidebar Warning Check
+                this.checkRequirements(dim.id);
+
+                let html = `
+                    <div class="flex flex-col md:flex-row h-full fade-in">
+                        <!-- Left Context -->
+                        <div class="md:w-1/3 bg-[#F8F8F8] p-8 border-r border-slate-200 flex flex-col justify-between">
+                            <div>
+                                <div class="mb-4 bg-white w-16 h-16 flex items-center justify-center rounded-xl shadow-sm border border-slate-100 text-[#475609]">
+                                    ${dim.icon}
+                                </div>
+                                <h3 class="text-xl font-bold text-[#2B2A2A] mb-2">${dim.title}</h3>
+                                <p class="text-sm text-slate-500 font-medium mb-6">${dim.desc}</p>
+                                <div class="bg-white p-4 rounded border border-slate-200">
+                                    <h4 class="text-[10px] font-bold text-slate-400 uppercase tracking-widest mb-2">Rationale</h4>
+                                    <p class="text-xs text-slate-600 italic leading-relaxed">"${dim.rationale}"</p>
+                                </div>
+                            </div>
+                            <div class="mt-6">
+                                <span class="text-xs font-bold text-[#475609] uppercase">Current status</span>
+                                <div class="flex items-center gap-2">
+                                    <!-- Display score with 1 decimal place for granular feedback -->
+                                    <div id="score-display-${dim.id}" class="text-3xl font-bold text-[#2B2A2A]">Level ${currentScore.toFixed(1)}</div>
+                                    <div id="warning-${dim.id}" class="hidden text-amber-500 font-bold text-xs uppercase tracking-wide flex items-center gap-1">
+                                        ${ICONS.alert} Requirements missing
+                                    </div>
+                                </div>
+                            </div>
+                        </div>
+                        
+                        <!-- Right List -->
+                        <div class="md:w-2/3 p-8 bg-white h-full overflow-y-auto no-scrollbar">
+                             <div class="flex justify-between items-center mb-6 border-b border-slate-100 pb-2">
+                                <h4 class="text-sm font-bold text-[#2B2A2A]">Evidence protocol</h4>
+                                <button onclick="app.clearSlide(${dim.id})" class="text-xs text-slate-400 hover:text-red-500 font-medium">Clear</button>
+                            </div>
+                            <div class="space-y-6">
+                                ${dim.items.map((item, idx) => this.renderProtocolItem(dim.id, item, idx)).join('')}
+                            </div>
+                        </div>
+                    </div>
+                `;
+                document.getElementById('protocol-container').innerHTML = html;
+                this.checkRequirements(dim.id); // Re-run check after render
+            }
+
+            renderProtocolItem(dimId, item, idx) {
+                const val = this.state.answers[dimId]?.[idx] || 0;
+                const selectedOptIndex = (item.type === 'tiles') ? (this.state.selections[dimId]?.[idx] ?? -1) : -1;
+                const isAnswered = (item.type === 'tiles' && selectedOptIndex !== -1) || (item.type !== 'tiles' && val > 0);
+                
+                const isUploaded = this.state.uploads.has(item.docId);
+                const questionText = this.formatText(item.question);
+                
+                let inputHtml = '';
+                if(item.type === 'tiles') {
+                    inputHtml = `<div id="tiles-${dimId}-${idx}" class="flex gap-2 w-full mt-2">
+                        ${item.options.map((opt, optIdx) => `
+                            <button onclick="app.handleAnswer(${dimId}, ${idx}, ${opt.v}, ${optIdx})" class="flex-1 py-2 px-3 rounded border text-xs ${selectedOptIndex === optIdx ? 'font-bold bg-[#ECF598] border-[#475609] text-[#2B2A2A]' : 'font-medium border-slate-200 text-slate-500 hover:border-slate-400 hover:bg-[#F8F8F8]'} transition-all">
+                                ${this.formatText(opt.l)}
+                            </button>
+                        `).join('')}
+                    </div>`;
+                } else {
+                    // Checkbox updated to put box first, then text, then tooltip icon
+                    // Added explicit inline width/height and border fallback to force visibility
+                    inputHtml = `<div class="flex items-center gap-2 mt-1">
+                        <label id="check-${dimId}-${idx}" class="flex items-center gap-2 cursor-pointer select-none" onclick="app.toggleCheck(${dimId}, ${idx})">
+                            <div style="width: 1.25rem; height: 1.25rem; ${val ? '' : 'border: 2px solid #cbd5e1;'}" class="w-5 h-5 flex-shrink-0 rounded border-2 flex items-center justify-center transition-all ${val ? 'bg-[#D9EB31] border-[#475609]' : 'border-slate-300 bg-white'}">
+                                ${val ? `<span class="text-[#475609]">${ICONS.check}</span>` : ''}
+                            </div>
+                            <span class="text-sm text-[#2B2A2A] font-medium">${questionText}</span>
+                        </label>
+                        <div class="text-slate-400 hover:text-fm-charcoal cursor-help transition-colors" onmouseenter="tooltip.show(event, '${item.why.replace(/'/g, '&#39;')}')" onmouseleave="tooltip.hide()">${ICONS.info}</div>
+                    </div>`;
+                }
+
+                return `
+                    <div class="border-b border-slate-100 pb-4 last:border-0">
+                        <!-- Top Row: Req/Opt Badge + Question Block -->
+                         <div class="flex items-start gap-2 mb-1">
+                             <div class="flex-grow">
+                                ${item.type === 'tiles' ? `<div class="flex items-center gap-2">
+                                    <span class="text-[10px] px-1.5 py-0.5 rounded font-bold tracking-wide ${item.required ? 'bg-[#2B2A2A] text-white' : 'bg-slate-200 text-slate-500'}">${item.required ? 'REQ' : 'OPT'}</span>
+                                    <span class="text-sm font-semibold text-[#2B2A2A]">${questionText}</span> <!-- Main question text for tiles -->
+                                    <div class="text-slate-400 hover:text-fm-charcoal cursor-help transition-colors" onmouseenter="tooltip.show(event, '${item.why.replace(/'/g, '&#39;')}')" onmouseleave="tooltip.hide()">${ICONS.info}</div>
+                                </div>` : `<span class="text-[10px] px-1.5 py-0.5 rounded font-bold tracking-wide ${item.required ? 'bg-[#2B2A2A] text-white' : 'bg-slate-200 text-slate-500'}">${item.required ? 'REQ' : 'OPT'}</span>`}
+                                ${inputHtml}
+                            </div>
+                        </div>
+                        
+                        <div id="reveal-${dimId}-${idx}" class="overflow-hidden transition-all duration-300 ease-out pl-0 ${isAnswered ? 'max-h-[300px] opacity-100 mt-3 pt-3 border-t border-dashed border-slate-100' : 'max-h-0 opacity-0 pointer-events-none'}">
+                            ${item.sub ? `<div class="mb-3">
+                                <p class="text-[10px] font-bold text-slate-400 uppercase mb-2">Verification</p>
+                                ${item.sub.map(s => `<div class="flex items-center gap-2 mb-1"><div class="w-1.5 h-1.5 rounded-full bg-[#D9EB31]"></div><span class="text-xs text-slate-600">${s}</span></div>`).join('')}
+                            </div>` : ''}
+                            
+                            <div id="doc-warning-${dimId}-${idx}" class="${(val > 0 && !isUploaded) ? '' : 'hidden'} text-amber-600 text-[10px] font-bold mb-3 flex items-start gap-1.5 bg-amber-50 p-2 rounded border border-amber-200">
+                                <span class="mt-0.5">${ICONS.alert}</span> <span>${item.required ? 'Document required to receive points for this item.' : 'Score halved until supporting document is linked.'}</span>
+                            </div>
+
+                            <button onclick="app.handleUpload('${item.docId}', '${item.doc}')" class="w-full py-2 rounded text-xs font-mono flex items-center justify-center gap-2 border transition-colors ${isUploaded ? 'bg-[#ECF598] border-[#475609] text-[#475609]' : 'bg-[#F8F8F8] border-dashed border-slate-200 text-slate-500 hover:border-[#475609]'}">
+                                ${isUploaded ? ICONS.check + ' Linked' : ICONS.upload + ` Upload ${item.doc}`}
+                            </button>
+                        </div>
+                    </div>
+                `;
+            }
+
+            clearSlide(dimId) {
+                this.state.answers[dimId] = {};
+                this.state.selections[dimId] = {};
+                this.updateAll();
+            }
+
+            updateSectorView() {
+                // Tabs
+                document.getElementById('sector-tabs').innerHTML = Object.values(SECTOR_MODULES).map(mod => `
+                    <button onclick="app.setSector('${mod.id}')" class="px-4 py-2 rounded text-xs font-bold border transition-colors ${this.state.currentSector === mod.id ? 'bg-[#D9EB31] border-[#D9EB31] text-[#475609]' : 'border-slate-600 hover:border-[#D9EB31] text-slate-300'}">
+                        ${mod.title}
+                    </button>
+                `).join('');
+
+                // Items
+                const items = SECTOR_MODULES[this.state.currentSector].items;
+                document.getElementById('sector-items').innerHTML = items.map(item => {
+                    const hasValue = !!this.state.sectorAnswers[this.state.currentSector]?.[item.id];
+                    const isUploaded = this.state.uploads.has(item.docId);
+
+                    return `
+                        <div class="bg-white border border-slate-200 p-4 rounded hover:border-[#475609] transition-colors group flex flex-col gap-3 shadow-sm">
+                            <div class="flex items-start justify-between gap-3 w-full">
+                                <div class="flex items-center gap-3 flex-grow">
+                                    ${item.type === 'checkbox' ? `
+                                        <label id="sec-check-${this.state.currentSector}-${item.id}" class="flex items-center gap-3 cursor-pointer select-none" onclick="app.toggleSectorCheck('${this.state.currentSector}', '${item.id}')">
+                                            <div style="width: 1.25rem; height: 1.25rem; ${hasValue ? '' : 'border: 2px solid #cbd5e1;'}" class="w-5 h-5 flex-shrink-0 rounded border-2 flex items-center justify-center transition-all ${hasValue ? 'bg-[#D9EB31] border-[#475609]' : 'border-slate-300 bg-white'}">
+                                                ${hasValue ? `<span class="text-[#475609]">${ICONS.check}</span>` : ''}
+                                            </div>
+                                            <div class="flex flex-col">
+                                                <span class="text-[9px] font-bold ${item.required ? 'text-[#475609]' : 'text-slate-400'} uppercase tracking-wide leading-none mb-0.5">${item.required ? 'Required' : 'Optional'}</span>
+                                                <span class="text-sm text-[#2B2A2A] font-medium group-hover:text-black transition-colors leading-tight">${this.formatText(item.question)}</span>
+                                            </div>
+                                        </label>
+                                    ` : `
+                                        <div class="flex flex-col">
+                                            <span class="text-[9px] font-bold ${item.required ? 'text-[#475609]' : 'text-slate-400'} uppercase tracking-wide leading-none mb-0.5">${item.required ? 'Required' : 'Optional'}</span>
+                                            <span class="text-sm text-[#2B2A2A] font-medium group-hover:text-black transition-colors leading-tight">${this.formatText(item.question)}</span>
+                                        </div>
+                                    `}
+                                    <div class="text-slate-400 hover:text-[#2B2A2A] cursor-help transition-colors flex-shrink-0" onmouseenter="tooltip.show(event, '${item.why.replace(/'/g, '&#39;')}')" onmouseleave="tooltip.hide()">${ICONS.info}</div>
+                                </div>
+                                <button onclick="app.handleUpload('${item.docId}', '${item.doc}')" class="text-[10px] px-3 py-1.5 rounded border border-dashed font-mono transition-all whitespace-nowrap flex-shrink-0 ${isUploaded ? 'bg-[#ECF598] border-[#475609] text-[#475609]' : 'border-slate-300 text-slate-500 hover:bg-[#F8F8F8] hover:border-[#475609] hover:text-[#475609]'}">
+                                    ${isUploaded ? '✓ Linked' : item.doc}
+                                </button>
+                            </div>
+                            
+                            ${item.type === 'tiles' ? `
+                                <div class="flex gap-2 w-full mt-1">
+                                    ${item.options.map((opt, optIdx) => {
+                                        const selectedOptIndex = this.state.sectorAnswers[this.state.currentSector]?.[item.id + '_opt'] ?? -1;
+                                        return `
+                                        <button onclick="app.handleSectorTile('${this.state.currentSector}', '${item.id}', ${opt.v}, ${optIdx})" class="flex-1 py-2 px-3 rounded border text-xs ${selectedOptIndex === optIdx ? 'font-bold bg-[#ECF598] border-[#475609] text-[#2B2A2A]' : 'font-medium border-slate-200 text-slate-500 hover:border-slate-400 hover:bg-[#F8F8F8]'} transition-all">
+                                            ${this.formatText(opt.l)}
+                                        </button>
+                                    `}).join('')}
+                                </div>
+                            ` : ''}
+
+                            ${item.type === 'text' ? `
+                                <div class="mt-1 w-full">
+                                    <input type="text" placeholder="${item.sub ? item.sub[0] : 'Enter value'}" value="${this.state.sectorAnswers[this.state.currentSector]?.[item.id] || ''}" onchange="app.handleSectorText('${this.state.currentSector}', '${item.id}', this.value)" class="w-full text-sm border border-slate-300 rounded p-2 focus:border-[#475609] focus:ring-1 focus:ring-[#475609] focus:outline-none transition-colors">
+                                </div>
+                            ` : ''}
+
+                            ${hasValue && !isUploaded ? `<div class="text-amber-600 text-[10px] font-bold flex items-center gap-1 mt-1 border-t border-dashed border-slate-200 pt-2">${ICONS.alert} ${item.required ? 'Document required for verification' : 'Document required for gold standard'}</div>` : ''}
+                        </div>
+                    `;
+                }).join('');
+            }
+
+            updateDocButtons() {
+                // Main entity doc button
+                const info = REGISTRY_INFO[this.state.formData.country];
+                const btn = document.getElementById('btn-doc_incorp');
+                const isUploaded = this.state.uploads.has('doc_incorp');
+                this.renderDocButton(btn, 'doc_incorp', info.doc, isUploaded);
+            }
+
+            renderDocButton(el, docId, label, isUploaded) {
+                if(isUploaded) {
+                    el.className = `px-6 py-3 rounded text-xs font-mono flex items-center gap-2 w-full md:w-auto justify-center transition-all border bg-[#ECF598] border-[#475609] text-[#475609]`;
+                    el.innerHTML = ICONS.check + ' Certificate linked';
+                } else {
+                    el.className = `px-6 py-3 rounded text-xs font-mono flex items-center gap-2 w-full md:w-auto justify-center transition-all border bg-[#F8F8F8] border-dashed border-slate-300 text-slate-500 hover:bg-white hover:border-[#475609]`;
+                    el.innerHTML = ICONS.upload + ` Upload ${label}`;
+                }
+            }
+        }
+
+        // --- TOOLTIP UTILS ---
+        const tooltip = {
+            el: document.getElementById('tooltip'),
+            show: (e, text) => {
+                const el = document.getElementById('tooltip');
+                el.innerText = text;
+                el.classList.add('visible');
+                el.style.left = (e.clientX + 10) + 'px';
+                el.style.top = (e.clientY + 10) + 'px';
+            },
+            hide: () => {
+                document.getElementById('tooltip').classList.remove('visible');
+            }
+        };
+
+        // Initialize
+        const app = new App();
+        window.app = app; // Expose to window for onclick handlers
+
+        // Close country dropdown when clicking outside
+        document.addEventListener('click', (e) => {
+            const btn = document.getElementById('country-btn');
+            const menu = document.getElementById('country-menu');
+            if (btn && menu && !btn.contains(e.target) && !menu.contains(e.target)) {
+                menu.classList.add('hidden');
+            }
+        });
+    </script>
+</body>
+</html>

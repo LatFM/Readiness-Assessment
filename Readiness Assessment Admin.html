@@ -1,0 +1,498 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Founders Match | Admin Dashboard</title>
+    
+    <!-- Tailwind CSS -->
+    <script src="https://cdn.tailwindcss.com"></script>
+    
+    <!-- Fonts -->
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Instrument+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+
+    <!-- Tailwind Config -->
+    <script>
+        tailwind.config = {
+            theme: {
+                extend: {
+                    colors: {
+                        fm: {
+                            boldGreen: '#D9EB31',
+                            darkGreen: '#475609',
+                            paleGreen: '#ECF598',
+                            charcoal: '#2B2A2A',
+                            mediumCharcoal: '#3E3E3E',
+                            taupe: '#F8F8F8',
+                            slate200: '#E2E8F0',
+                            slate400: '#94A3B8'
+                        }
+                    },
+                    fontFamily: {
+                        sans: ['Instrument Sans', 'sans-serif'],
+                    }
+                }
+            }
+        }
+    </script>
+
+    <style>
+        body { font-family: 'Instrument Sans', sans-serif; }
+        .no-scrollbar::-webkit-scrollbar { display: none; }
+        .no-scrollbar { -ms-overflow-style: none; scrollbar-width: none; }
+    </style>
+</head>
+<body class="bg-fm-taupe text-fm-charcoal min-h-screen flex flex-col p-6">
+
+    <main class="flex-grow max-w-7xl mx-auto w-full grid lg:grid-cols-12 gap-6 relative">
+        
+        <!-- Sidebar / Filter (Left) -->
+        <aside class="lg:col-span-3 space-y-6">
+            <!-- Brand / Title (Moved from Header) -->
+            <div class="mb-2">
+                <div class="text-xl font-bold tracking-tight text-fm-charcoal">
+                    Founders Match
+                </div>
+                <div class="text-sm font-medium text-fm-slate400">Assessment Admin</div>
+            </div>
+
+            <!-- Stats -->
+            <div class="grid grid-cols-1 gap-4">
+                <div class="bg-white p-5 rounded-xl border border-fm-slate200 shadow-sm">
+                    <div class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Total Submissions</div>
+                    <div class="text-3xl font-bold text-fm-charcoal" id="stat-total">-</div>
+                </div>
+                <div class="bg-white p-5 rounded-xl border border-fm-slate200 shadow-sm">
+                    <div class="text-slate-500 text-xs font-bold uppercase tracking-wider mb-1">Avg. Readiness</div>
+                    <div class="text-3xl font-bold text-fm-charcoal" id="stat-avg">-</div>
+                </div>
+            </div>
+
+            <!-- Filters -->
+            <div class="bg-white p-5 rounded-xl border border-fm-slate200 shadow-sm">
+                <h3 class="font-bold text-sm mb-4">Filter View</h3>
+                <div class="space-y-3">
+                    <div>
+                        <label class="text-xs font-bold text-slate-500 uppercase block mb-1">Sector</label>
+                        <select id="filter-sector" onchange="renderTable()" class="w-full text-sm border border-slate-300 rounded p-2 focus:border-fm-darkGreen focus:outline-none">
+                            <option value="all">All Sectors</option>
+                            <option value="fin">Financial Services</option>
+                            <option value="health">Healthcare</option>
+                            <option value="gov">Public Sector</option>
+                            <option value="retail">Retail</option>
+                            <option value="aero">Aerospace & Defence</option>
+                            <option value="telecom">Telecoms & Media</option>
+                        </select>
+                    </div>
+                    <div>
+                        <label class="text-xs font-bold text-slate-500 uppercase block mb-1">Readiness Tier</label>
+                        <select id="filter-tier" onchange="renderTable()" class="w-full text-sm border border-slate-300 rounded p-2 focus:border-fm-darkGreen focus:outline-none">
+                            <option value="all">All Tiers</option>
+                            <option value="high">Enterprise Ready (Avg 4+)</option>
+                            <option value="med">Growth Stage (Avg 3-4)</option>
+                            <option value="low">Early Stage (Avg <3)</option>
+                        </select>
+                    </div>
+                </div>
+            </div>
+
+            <!-- Status -->
+            <div id="connection-status" class="text-xs font-medium text-slate-400 flex items-center gap-2">
+                <span class="w-2 h-2 rounded-full bg-slate-300"></span> Connecting...
+            </div>
+        </aside>
+
+        <!-- Main List (Center) -->
+        <section class="lg:col-span-9 bg-white rounded-xl border border-fm-slate200 shadow-sm overflow-hidden flex flex-col min-h-[600px]">
+            <div class="p-4 border-b border-fm-slate200 bg-slate-50 flex justify-between items-center">
+                <h2 class="font-bold text-fm-charcoal">Submissions</h2>
+                <div class="flex gap-2">
+                    <!-- JSON Upload Input -->
+                    <input type="file" id="json-upload" accept=".json" class="hidden" onchange="handleJsonUpload(this)">
+                    <button onclick="document.getElementById('json-upload').click()" class="text-xs font-bold text-fm-charcoal hover:text-fm-darkGreen bg-white border border-slate-300 hover:bg-slate-50 px-3 py-1.5 rounded transition-colors flex items-center gap-2">
+                        <svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg>
+                        Import JSON
+                    </button>
+                    <button onclick="refreshData()" class="text-xs font-bold text-fm-boldGreen hover:text-fm-darkGreen bg-fm-charcoal hover:bg-fm-mediumCharcoal px-3 py-1.5 rounded transition-colors">
+                        Refresh Data
+                    </button>
+                </div>
+            </div>
+            
+            <div class="overflow-x-auto flex-grow">
+                <table class="w-full text-sm text-left">
+                    <thead class="bg-white text-slate-500 font-bold border-b border-slate-100">
+                        <tr>
+                            <th class="px-6 py-4 w-48">Company</th>
+                            <th class="px-6 py-4">Sector</th>
+                            <th class="px-6 py-4">Date</th>
+                            <th class="px-6 py-4">Readiness</th>
+                            <th class="px-6 py-4 text-right">Actions</th>
+                        </tr>
+                    </thead>
+                    <tbody id="submissions-table" class="divide-y divide-slate-50">
+                        <!-- Rows injected here -->
+                        <tr>
+                            <td colspan="5" class="px-6 py-12 text-center text-slate-400">Loading submissions...</td>
+                        </tr>
+                    </tbody>
+                </table>
+            </div>
+        </section>
+
+    </main>
+
+    <!-- Slide-over Details Panel -->
+    <div id="details-panel" class="fixed inset-0 z-50 hidden">
+        <div class="absolute inset-0 bg-fm-charcoal/20 backdrop-blur-sm transition-opacity" onclick="closeDetails()"></div>
+        <div class="absolute inset-y-0 right-0 max-w-2xl w-full bg-white shadow-2xl transform transition-transform translate-x-full duration-300 ease-out flex flex-col" id="details-content">
+            
+            <!-- Panel Header -->
+            <div class="p-6 border-b border-fm-slate200 flex justify-between items-start bg-slate-50">
+                <div>
+                    <h2 class="text-2xl font-bold text-fm-charcoal" id="detail-company">Company Name</h2>
+                    <div class="flex items-center gap-2 mt-2 text-sm text-slate-500">
+                        <span id="detail-sector" class="px-2 py-0.5 rounded bg-white border border-slate-200 font-mono text-xs font-bold uppercase">SECTOR</span>
+                        <span id="detail-reg">Reg: 123456</span>
+                        <span>•</span>
+                        <a href="#" id="detail-link" target="_blank" class="hover:text-fm-darkGreen hover:underline">Website ↗</a>
+                    </div>
+                </div>
+                <button onclick="closeDetails()" class="p-2 hover:bg-slate-200 rounded-full transition-colors text-slate-500">
+                    <svg width="24" height="24" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2"><line x1="18" y1="6" x2="6" y2="18"></line><line x1="6" y1="6" x2="18" y2="18"></line></svg>
+                </button>
+            </div>
+
+            <!-- Panel Body -->
+            <div class="flex-grow overflow-y-auto p-8 space-y-8">
+                
+                <!-- Score Summary -->
+                <div class="grid grid-cols-2 gap-4">
+                    <div class="p-4 bg-fm-taupe rounded-xl border border-slate-200">
+                        <div class="text-xs font-bold text-slate-500 uppercase mb-2">Overall Score</div>
+                        <div class="text-4xl font-bold text-fm-charcoal" id="detail-score-avg">0.0</div>
+                        <div class="text-sm font-medium mt-1" id="detail-tier-text">Tier</div>
+                    </div>
+                    <div class="p-4 bg-fm-taupe rounded-xl border border-slate-200">
+                        <div class="text-xs font-bold text-slate-500 uppercase mb-2">Documents</div>
+                        <div class="text-4xl font-bold text-fm-charcoal" id="detail-doc-count">0</div>
+                        <div class="text-sm font-medium text-slate-500 mt-1">Uploaded</div>
+                    </div>
+                </div>
+
+                <!-- Core Scores List -->
+                <div>
+                    <h3 class="font-bold text-fm-charcoal border-b border-slate-200 pb-2 mb-4">Dimension Breakdown</h3>
+                    <div class="space-y-3" id="detail-dimensions">
+                        <!-- Bars injected -->
+                    </div>
+                </div>
+
+                <!-- Sector Specifics -->
+                <div>
+                    <h3 class="font-bold text-fm-charcoal border-b border-slate-200 pb-2 mb-4">Sector Mandates</h3>
+                    <div class="bg-slate-50 rounded-xl p-4 border border-slate-100" id="detail-sector-answers">
+                        <!-- Sector answers injected -->
+                    </div>
+                </div>
+
+                <!-- Raw Metadata (Collapsible) -->
+                <div>
+                    <details class="group">
+                        <summary class="flex justify-between items-center font-bold text-xs uppercase text-slate-400 cursor-pointer hover:text-fm-darkGreen">
+                            View Raw Metadata
+                            <span class="group-open:rotate-180 transition-transform">▼</span>
+                        </summary>
+                        <div class="mt-4 p-4 bg-slate-900 rounded-lg overflow-x-auto">
+                            <pre class="text-[10px] font-mono text-green-400" id="detail-json">{}</pre>
+                        </div>
+                    </details>
+                </div>
+
+            </div>
+        </div>
+    </div>
+
+    <!-- Logic -->
+    <script type="module">
+        import { initializeApp } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-app.js';
+        import { getAuth, signInAnonymously, onAuthStateChanged, signInWithCustomToken } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-auth.js';
+        import { getFirestore, collection, query, orderBy, getDocs } from 'https://www.gstatic.com/firebasejs/11.6.1/firebase-firestore.js';
+
+        // Config
+        const firebaseConfig = JSON.parse(__firebase_config);
+        const fbApp = initializeApp(firebaseConfig);
+        const auth = getAuth(fbApp);
+        const db = getFirestore(fbApp);
+        const appId = typeof __app_id !== 'undefined' ? __app_id : 'default-app-id';
+
+        let submissions = [];
+
+        // Auth & Load
+        const init = async () => {
+            const statusEl = document.getElementById('connection-status');
+            
+            try {
+                if (typeof __initial_auth_token !== 'undefined' && __initial_auth_token) {
+                    await signInWithCustomToken(auth, __initial_auth_token);
+                } else {
+                    await signInAnonymously(auth);
+                }
+                
+                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-fm-boldGreen"></span> Connected`;
+                await loadData();
+
+            } catch (err) {
+                console.error(err);
+                statusEl.innerHTML = `<span class="w-2 h-2 rounded-full bg-red-500"></span> Error`;
+            }
+        };
+
+        const loadData = async () => {
+            if (!auth.currentUser) return;
+            
+            const userId = auth.currentUser.uid;
+            // Fetching from the same path used in submission
+            const q = query(collection(db, 'artifacts', appId, 'users', userId, 'readiness_submissions'), orderBy('timestamp', 'desc'));
+            
+            try {
+                const snapshot = await getDocs(q);
+                // Merge imported data if any exists in local state, for now we overwrite from DB but imports will append
+                // Actually, let's keep DB data as truth, and append imports visually
+                // We will just reload DB data here
+                const dbSubmissions = snapshot.docs.map(doc => ({ id: doc.id, ...doc.data() }));
+                
+                // If we want to keep manually imported items visible after refresh:
+                // Filter out non-DB items from current submissions list (if any) and re-append?
+                // For simplicity, refresh replaces with DB data. Manual import adds to it.
+                submissions = dbSubmissions;
+                
+                updateStats();
+                renderTable();
+            } catch (e) {
+                console.error("Fetch error:", e);
+                document.getElementById('submissions-table').innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-red-500">Failed to load data. Permissions or network error.</td></tr>`;
+            }
+        };
+
+        window.refreshData = loadData;
+
+        window.handleJsonUpload = (input) => {
+            const file = input.files[0];
+            if (!file) return;
+
+            const reader = new FileReader();
+            reader.onload = (e) => {
+                try {
+                    const json = JSON.parse(e.target.result);
+                    // Determine if it's a single object or array
+                    const newItems = Array.isArray(json) ? json : [json];
+                    
+                    // Normalize data structure
+                    const normalizedItems = newItems.map(item => ({
+                        id: item.id || 'imported-' + Date.now() + Math.random().toString(36).substr(2, 9),
+                        timestamp: item.timestamp || { seconds: Date.now() / 1000 },
+                        ...item
+                    }));
+
+                    // Add to submissions array
+                    submissions = [...normalizedItems, ...submissions];
+                    
+                    // Re-render
+                    updateStats();
+                    renderTable();
+                    
+                    // alert(`Successfully imported ${normalizedItems.length} submission(s).`);
+                } catch (err) {
+                    console.error("JSON Parse Error", err);
+                    alert("Failed to parse JSON file.");
+                }
+                // Reset input
+                input.value = '';
+            };
+            reader.readAsText(file);
+        };
+
+        // --- Render Logic ---
+
+        const updateStats = () => {
+            document.getElementById('stat-total').innerText = submissions.length;
+            
+            if (submissions.length === 0) {
+                document.getElementById('stat-avg').innerText = "-";
+                return;
+            }
+
+            const totalScoreSum = submissions.reduce((acc, sub) => {
+                const scores = Object.values(sub.scores || {});
+                const avg = scores.length ? scores.reduce((a,b)=>a+b,0) / scores.length : 0;
+                return acc + avg;
+            }, 0);
+            
+            document.getElementById('stat-avg').innerText = (totalScoreSum / submissions.length).toFixed(1);
+        };
+
+        window.renderTable = () => {
+            const tbody = document.getElementById('submissions-table');
+            const sectorFilter = document.getElementById('filter-sector').value;
+            const tierFilter = document.getElementById('filter-tier').value;
+
+            let filtered = submissions.filter(sub => {
+                if (sectorFilter !== 'all' && sub.selected_sector !== sectorFilter) return false;
+                
+                const scores = Object.values(sub.scores || {});
+                const avg = scores.length ? scores.reduce((a,b)=>a+b,0)/scores.length : 0;
+                
+                if (tierFilter === 'high' && avg < 4) return false;
+                if (tierFilter === 'med' && (avg < 3 || avg >= 4)) return false;
+                if (tierFilter === 'low' && avg >= 3) return false;
+                
+                return true;
+            });
+
+            if (filtered.length === 0) {
+                tbody.innerHTML = `<tr><td colspan="5" class="px-6 py-12 text-center text-slate-400">No submissions found.</td></tr>`;
+                return;
+            }
+
+            tbody.innerHTML = filtered.map(sub => {
+                const scores = Object.values(sub.scores || {});
+                const avg = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : '0.0';
+                
+                let tierClass = 'bg-slate-100 text-slate-500';
+                let tierLabel = 'Early Stage';
+                if (avg >= 4) { tierClass = 'bg-fm-paleGreen text-fm-darkGreen border border-fm-darkGreen/20'; tierLabel = 'Enterprise Ready'; }
+                else if (avg >= 3) { tierClass = 'bg-white text-fm-charcoal border border-fm-charcoal'; tierLabel = 'Growth Stage'; }
+
+                let date = 'N/A';
+                if (sub.timestamp) {
+                    // Handle Firestore Timestamp or standard ISO strings or numbers
+                    const ms = sub.timestamp.seconds ? sub.timestamp.seconds * 1000 : new Date(sub.timestamp).getTime();
+                    if (!isNaN(ms)) date = new Date(ms).toLocaleDateString();
+                }
+                
+                return `
+                <tr class="hover:bg-slate-50 group transition-colors cursor-pointer" onclick="openDetails('${sub.id}')">
+                    <td class="px-6 py-4 font-medium text-fm-charcoal">
+                        ${sub.company_info?.name || 'Unknown Company'}
+                        <div class="text-xs text-slate-400 font-normal mt-0.5">${sub.company_info?.website || ''}</div>
+                    </td>
+                    <td class="px-6 py-4">
+                        <span class="inline-flex items-center px-2.5 py-0.5 rounded-full text-xs font-bold bg-white border border-slate-200 text-slate-600 uppercase">
+                            ${sub.selected_sector || 'N/A'}
+                        </span>
+                    </td>
+                    <td class="px-6 py-4 text-slate-500 font-mono text-xs">${date}</td>
+                    <td class="px-6 py-4">
+                        <div class="flex items-center gap-2">
+                            <span class="text-sm font-bold w-6 text-right">${avg}</span>
+                            <div class="h-1.5 w-16 bg-slate-200 rounded-full overflow-hidden">
+                                <div class="h-full bg-fm-boldGreen" style="width: ${(avg/5)*100}%"></div>
+                            </div>
+                        </div>
+                        <div class="text-[10px] text-slate-400 mt-1 uppercase font-bold">${tierLabel}</div>
+                    </td>
+                    <td class="px-6 py-4 text-right">
+                        <button class="text-slate-400 hover:text-fm-darkGreen transition-colors">
+                            View →
+                        </button>
+                    </td>
+                </tr>
+                `;
+            }).join('');
+        };
+
+        // --- Details Panel ---
+
+        window.openDetails = (id) => {
+            const sub = submissions.find(s => s.id === id);
+            if (!sub) return;
+
+            const scores = Object.values(sub.scores || {});
+            const avg = scores.length ? (scores.reduce((a,b)=>a+b,0)/scores.length).toFixed(1) : '0.0';
+
+            // Populate Info
+            document.getElementById('detail-company').innerText = sub.company_info?.name || 'Unknown';
+            document.getElementById('detail-sector').innerText = (sub.selected_sector || 'N/A').toUpperCase();
+            document.getElementById('detail-reg').innerText = `Reg: ${sub.company_info?.reg_no || 'N/A'}`;
+            const link = document.getElementById('detail-link');
+            if (sub.company_info?.website) {
+                link.href = sub.company_info.website.startsWith('http') ? sub.company_info.website : `https://${sub.company_info.website}`;
+                link.classList.remove('hidden');
+            } else {
+                link.classList.add('hidden');
+            }
+
+            // Populate Scores
+            document.getElementById('detail-score-avg').innerText = avg;
+            document.getElementById('detail-doc-count').innerText = (sub.uploaded_documents || []).length;
+            
+            let tierText = "Phase I: Early Stage";
+            if (avg >= 4) tierText = "🟢 Enterprise Ready";
+            else if (avg >= 3) tierText = "🟡 Growth Stage";
+            document.getElementById('detail-tier-text').innerText = tierText;
+
+            // Dimensions Bars
+            const dimNames = {
+                1: "Corporate Structure",
+                2: "Security & Compliance",
+                3: "AI Governance",
+                4: "ESG",
+                5: "Commercial",
+                6: "Operations"
+            };
+            
+            const dimsContainer = document.getElementById('detail-dimensions');
+            dimsContainer.innerHTML = Object.entries(sub.scores || {}).map(([key, val]) => `
+                <div class="flex items-center gap-4 text-sm">
+                    <div class="w-32 font-medium text-slate-600 truncate">${dimNames[key] || 'Dim '+key}</div>
+                    <div class="flex-grow bg-slate-100 rounded-full h-2 overflow-hidden">
+                        <div class="h-full bg-fm-charcoal" style="width: ${(val/5)*100}%"></div>
+                    </div>
+                    <div class="w-12 text-right font-bold text-fm-charcoal">Lvl ${val}</div>
+                </div>
+            `).join('');
+
+            // Sector Answers
+            const sectorData = sub.sector_answers?.[sub.selected_sector] || {};
+            const sectorContainer = document.getElementById('detail-sector-answers');
+            const entries = Object.entries(sectorData);
+            
+            if (entries.length === 0) {
+                sectorContainer.innerHTML = `<span class="text-slate-400 text-xs italic">No sector data provided.</span>`;
+            } else {
+                sectorContainer.innerHTML = entries.map(([k, v]) => `
+                    <div class="flex justify-between items-center py-1 border-b border-slate-100 last:border-0">
+                        <span class="text-xs font-mono text-slate-500">${k}</span>
+                        <span class="text-xs font-bold ${v ? 'text-fm-darkGreen' : 'text-slate-300'}">${v ? 'YES' : 'NO'}</span>
+                    </div>
+                `).join('');
+            }
+
+            // Raw JSON
+            document.getElementById('detail-json').innerText = JSON.stringify(sub, null, 2);
+
+            // Show Panel
+            const panel = document.getElementById('details-panel');
+            const content = document.getElementById('details-content');
+            panel.classList.remove('hidden');
+            setTimeout(() => {
+                content.classList.remove('translate-x-full');
+            }, 10);
+        };
+
+        window.closeDetails = () => {
+            const panel = document.getElementById('details-panel');
+            const content = document.getElementById('details-content');
+            content.classList.add('translate-x-full');
+            setTimeout(() => {
+                panel.classList.add('hidden');
+            }, 300);
+        };
+
+        init();
+    </script>
+</body>
+</html>
